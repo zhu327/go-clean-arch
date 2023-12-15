@@ -1,7 +1,7 @@
 package http
 
 import (
-	handlerInterface "go-wire/pkg/api/handler/interfaces"
+	"go-wire/pkg/api/handler"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,8 +28,8 @@ type ServerHTTP struct {
 // @In							header
 // @Description				Add prefix of Bearer before  token Ex: "Bearer token"
 // @Query.collection.format	multi
-func NewServerHTTP(authHandler handlerInterface.AuthHandler, userHandler handlerInterface.UserHandler) *ServerHTTP {
-	engine := gin.Default()
+func NewServerHTTP(userHandler *handler.UserHandler) *ServerHTTP {
+	engine := gin.New()
 
 	engine.Use(gin.Logger())
 
@@ -48,5 +48,5 @@ func NewServerHTTP(authHandler handlerInterface.AuthHandler, userHandler handler
 }
 
 func (s *ServerHTTP) Start() error {
-	return s.Engine.Run(":8080")
+	return s.Engine.Run(":8000")
 }

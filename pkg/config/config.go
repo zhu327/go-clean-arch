@@ -29,17 +29,17 @@ func LoadConfig() (config Config, err error) {
 		//binding
 		for _, env := range envs {
 			if err := viper.BindEnv(env); err != nil {
-				return Config{}, err
+				return config, err
 			}
 		}
 	}
 
 	if err := viper.Unmarshal(&config); err != nil {
-		return Config{}, err
+		return config, err
 	}
 
 	if err := validator.New().Struct(config); err != nil {
-		return Config{}, err
+		return config, err
 	}
 
 	return config, nil
