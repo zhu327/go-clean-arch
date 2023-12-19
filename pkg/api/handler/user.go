@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"go-wire/pkg/domain"
 	services "go-wire/pkg/usecase/interface"
+	"go-wire/pkg/utils"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/copier"
 )
 
 type UserHandler struct {
@@ -24,51 +26,46 @@ func NewUserHandler(userUserCase services.UserUseCase) *UserHandler {
 	}
 }
 
-// FindAll godoc
-// @summary Get all users
-// @description Get all users
-// @tags users
-// @security ApiKeyAuth
-// @id FindAll
-// @produce json
-// @Router /api/users [get]
-// @response 200 {object} []Response "OK"
-func (cr *UserHandler) FindAll(c *gin.Context) {
-	users, err := cr.userUserCase.FindAll(c.Request.Context())
+// @Basepath /
+// @Accept json
+// @Produce json
+// @Router / [get]
 
-	if err != nil {
-		c.AbortWithStatus(http.StatusNotFound)
-	} else {
-		c.JSON(http.StatusOK, users)
-	}
-}
-
-// FindByID godoc
-// @summary Get user by id
-// @description Get user by id
+// SignUp godoc
+// @summary Create new user
+// @description Create new user
 // @tags users
-// @security ApiKeyAuth
-// @id FindByID
+// @id SignUp
 // @produce json
-// @param id path int true "User ID"
-// @Router /api/users/{id} [get]
+// @Accept json
+// @Produce json
+// @param user body User true "User Data"
+// @Router /api/users [post]
 // @response 200 {object} Response "OK"
-func (cr *UserHandler) FindByID(c *gin.Context) {
-	paramid := c.Param("id")
-	id, err := strconv.Atoi(paramid)
+func (cr *UserHandler) UserSignUp(c *gin.Context) {
+	var body utils.UserSignUp
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "cannot parse id",
-		})
+	if err := c.BindJSON(&body); err != nil {
+		response := utils.ErrorResponse(400, "Error: Failed to bind JSON", err.Error(), body)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	var userBody domain.User
+	copier.Copy(&userBody, &body)
+
+	if _, err := cr.userUserCase.FindByEmail(c.Request.Context(), body.Email); err == nil {
+		response := utils.ErrorResponse(400, "Error: Email already exist", err.Error(), body)
+		c.JSON(http.StatusBadRequest, response)
 		return
 	}
 
-	user, err := cr.userUserCase.FindByID(c.Request.Context(), uint(id))
-
+	body.Password, _ = utils.HashPassword(body.Password)
+	_, err := cr.userUserCase.SignUpUser(c.Request.Context(), userBody)
 	if err != nil {
-		c.AbortWithStatus(http.StatusNotFound)
-	} else {
-		c.JSON(http.StatusOK, user)
+		response := utils.ErrorResponse(400, "Error: Failed to create user", err.Error(), body)
+		c.JSON(http.StatusBadRequest, response)
+		return
 	}
+	response := utils.SuccessResponse(200, "Success: User created", body)
+	c.JSON(http.StatusOK, response)
 }

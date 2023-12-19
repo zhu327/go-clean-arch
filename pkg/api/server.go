@@ -48,5 +48,5 @@ func NewServerHTTP(userHandler *handler.UserHandler) *ServerHTTP {
 }
 
 func (s *ServerHTTP) Start() error {
-	return s.Engine.Run(":8000")
+	return s.Engine.Run(":8001")
 }
