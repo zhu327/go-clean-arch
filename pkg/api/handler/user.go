@@ -26,22 +26,18 @@ func NewUserHandler(userUserCase services.UserUseCase) *UserHandler {
 	}
 }
 
-// @Basepath /
-// @Accept json
-// @Produce json
-// @Router / [get]
-
-// SignUp godoc
-// @summary Create new user
-// @description Create new user
-// @tags users
-// @id SignUp
-// @produce json
-// @Accept json
-// @Produce json
-// @param user body utils.UserSignUp true "User Data"
-// @Router /api/users [post]
-// @response 200 {object} Response "OK"
+// UserSignUp godoc
+//
+//	@Summary		Signup (User)
+//	@Description	API for user to register a new account
+//	@Id				UserSignUp
+//	@Tags			User
+//	@Param			input	body utils.UserSignUp	true	"Input Fields"
+//	@Router			/api/user/signup [post]
+//	@Success		200	{object}	utils.Response{}
+//	@Failure		400	{object}	utils.Response{}
+//	@Failure		409	{object}	utils.Response{}
+//	@Failure		500	{object}	utils.Response{}
 func (cr *UserHandler) UserSignUp(c *gin.Context) {
 	var body utils.UserSignUp
 

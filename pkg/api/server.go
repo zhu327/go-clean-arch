@@ -17,13 +17,13 @@ type ServerHTTP struct {
 	Engine *gin.Engine
 }
 
-// @title					Backend API
+// @title					Backend API with Go-Wire
 // @description				This is a sample server for Backend API.
 //
 // @contact.name				For API Support
 // @contact.email				susiltiwari750@gmail.com
 //
-// @BasePath					/api
+// @BasePath					/
 // @SecurityDefinitions.apikey	BearerAuth
 // @Name						Authorization
 // @In							header
@@ -38,7 +38,7 @@ func NewServerHTTP(userHandler *handler.UserHandler) *ServerHTTP {
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	// api routes
-	routes.UserRoutes(engine.Group(("/")), userHandler)
+	routes.UserRoutes(engine.Group(("/api")), userHandler)
 
 	engine.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, gin.H{

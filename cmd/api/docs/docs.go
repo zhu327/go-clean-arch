@@ -18,25 +18,18 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/users": {
+        "/api/user/signup": {
             "post": {
-                "description": "Create new user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json",
-                    "application/json"
-                ],
+                "description": "API for user to register a new account",
                 "tags": [
-                    "users"
+                    "User"
                 ],
-                "summary": "Create new user",
-                "operationId": "SignUp",
+                "summary": "Signup (User)",
+                "operationId": "UserSignUp",
                 "parameters": [
                     {
-                        "description": "User Data",
-                        "name": "user",
+                        "description": "Input Fields",
+                        "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -48,7 +41,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Response"
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
                         }
                     }
                 }
@@ -56,17 +67,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handler.Response": {
+        "utils.Response": {
             "type": "object",
             "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "id": {
+                "code": {
                     "type": "integer"
                 },
-                "username": {
+                "data": {},
+                "error": {},
+                "message": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "integer"
                 }
             }
         },
@@ -104,9 +117,9 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "",
 	Host:             "",
-	BasePath:         "/api",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Backend API",
+	Title:            "Backend API with Go-Wire",
 	Description:      "This is a sample server for Backend API.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

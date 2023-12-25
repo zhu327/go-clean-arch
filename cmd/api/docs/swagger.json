@@ -2,33 +2,26 @@
     "swagger": "2.0",
     "info": {
         "description": "This is a sample server for Backend API.",
-        "title": "Backend API",
+        "title": "Backend API with Go-Wire",
         "contact": {
             "name": "For API Support",
             "email": "susiltiwari750@gmail.com"
         }
     },
-    "basePath": "/api",
+    "basePath": "/",
     "paths": {
-        "/api/users": {
+        "/api/user/signup": {
             "post": {
-                "description": "Create new user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json",
-                    "application/json"
-                ],
+                "description": "API for user to register a new account",
                 "tags": [
-                    "users"
+                    "User"
                 ],
-                "summary": "Create new user",
-                "operationId": "SignUp",
+                "summary": "Signup (User)",
+                "operationId": "UserSignUp",
                 "parameters": [
                     {
-                        "description": "User Data",
-                        "name": "user",
+                        "description": "Input Fields",
+                        "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -40,7 +33,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Response"
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
                         }
                     }
                 }
@@ -48,17 +59,19 @@
         }
     },
     "definitions": {
-        "handler.Response": {
+        "utils.Response": {
             "type": "object",
             "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "id": {
+                "code": {
                     "type": "integer"
                 },
-                "username": {
+                "data": {},
+                "error": {},
+                "message": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "integer"
                 }
             }
         },
