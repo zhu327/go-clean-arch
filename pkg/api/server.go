@@ -2,6 +2,7 @@ package http
 
 import (
 	"go-wire/pkg/api/handler"
+	"go-wire/pkg/api/routes"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,9 @@ func NewServerHTTP(userHandler *handler.UserHandler) *ServerHTTP {
 
 	// swagger docs
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
+	// api routes
+	routes.UserRoutes(engine.Group(("/")), userHandler)
 
 	engine.NoRoute(func(ctx *gin.Context) {
 		ctx.JSON(http.StatusNotFound, gin.H{

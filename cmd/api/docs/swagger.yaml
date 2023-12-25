@@ -1,4 +1,62 @@
+basePath: /api
+definitions:
+  handler.Response:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+  utils.UserSignUp:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
 info:
-  contact: {}
-paths: {}
+  contact:
+    email: susiltiwari750@gmail.com
+    name: For API Support
+  description: This is a sample server for Backend API.
+  title: Backend API
+paths:
+  /api/users:
+    post:
+      consumes:
+      - application/json
+      description: Create new user
+      operationId: SignUp
+      parameters:
+      - description: User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/utils.UserSignUp'
+      produces:
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+      summary: Create new user
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Add prefix of Bearer before  token Ex: "Bearer token"'
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -39,7 +39,7 @@ func NewUserHandler(userUserCase services.UserUseCase) *UserHandler {
 // @produce json
 // @Accept json
 // @Produce json
-// @param user body User true "User Data"
+// @param user body utils.UserSignUp true "User Data"
 // @Router /api/users [post]
 // @response 200 {object} Response "OK"
 func (cr *UserHandler) UserSignUp(c *gin.Context) {
