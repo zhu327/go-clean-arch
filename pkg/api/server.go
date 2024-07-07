@@ -5,6 +5,8 @@ import (
 	"go-wire/pkg/api/routes"
 	"net/http"
 
+	_ "go-wire/cmd/api/docs"
+
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
