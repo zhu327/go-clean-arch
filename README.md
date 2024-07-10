@@ -9,7 +9,7 @@ These instructions will help you set up and run the project on your local machin
 ### Prerequisites
 
 - [Go](https://golang.org/dl/) 1.16 or higher
-- [Wire](https://github.com/google/wire)
+- [Docker and Docker compose](https://docs.docker.com/engine/install/)
 
 ### Installation
 
@@ -23,19 +23,18 @@ These instructions will help you set up and run the project on your local machin
     ```sh
     cp .env.sample .env
     ```
-3. Install dependencies:
-    ```sh
-    go mod download
+3. Setup
+    ```
+     $ docker-compose build
+     $ docker-compose up
+     $ docker-compose run --rm migrate
     ```
 
-### Running the Project
-
-1. In order to generate the Wire code:
-    ```sh
-    wire
-    ```
-
-2. Run the project:
-    ```sh
-    go run ./cmd/api/main.go
-    ```
+### Setup Environment
+```
+DB_HOST=db
+DB_NAME=postgres
+DB_USER=postgres
+DB_PORT=5432
+DB_PASSWORD=postgres
+```
