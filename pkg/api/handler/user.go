@@ -5,6 +5,7 @@ import (
 	services "go-wire/pkg/usecase/interface"
 	"go-wire/pkg/utils"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
@@ -63,5 +64,33 @@ func (cr *UserHandler) UserSignUp(c *gin.Context) {
 		return
 	}
 	response := utils.SuccessResponse(200, "Success: User created", body)
+	c.JSON(http.StatusOK, response)
+}
+
+// UserMe godoc
+//
+//	@Summary		Get User Profile
+//	@Description	API for user to get their own profile
+//	@Id				UserMe
+//	@Tags			User
+//	@Security		Bearer
+//	@Router			/api/user/me [get]
+//	@Success		200	{object}	Response{}
+//	@Failure		400	{object}	utils.Response{}
+//	@Failure		401	{object}	utils.Response{}
+//	@Failure		500	{object}	utils.Response{}
+func (cr *UserHandler) UserMe(c *gin.Context) {
+	userID, err := strconv.Atoi(c.Query("id"))
+	if err != nil {
+		response := utils.ErrorResponse(http.StatusBadRequest, "Couldn't get user id", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, response)
+	}
+	userDetail, err := cr.userUserCase.FindByID(c.Request.Context(), uint(userID))
+	if err != nil {
+		response := utils.ErrorResponse(http.StatusBadRequest, "Couldn't get user detail", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	response := utils.SuccessResponse(http.StatusOK, "Successfully got user detail", userDetail)
 	c.JSON(http.StatusOK, response)
 }

@@ -8,9 +8,10 @@ import (
 
 func UserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler) {
 	// signup routes for user
-	signup := api.Group("/user")
+	user := api.Group("/user")
 	{
-		signup.POST("/signup", userHandler.UserSignUp)
+		user.POST("/signup", userHandler.UserSignUp)
+		user.GET("/me", userHandler.UserMe)
 	}
 
 }

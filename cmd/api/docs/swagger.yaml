@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  handler.Response:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
   utils.Response:
     properties:
       code:
@@ -31,6 +40,32 @@ info:
   description: This is a sample server for Backend API.
   title: Backend API with Go-Wire
 paths:
+  /api/user/me:
+    get:
+      description: API for user to get their own profile
+      operationId: UserMe
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: Get User Profile
+      tags:
+      - User
   /api/user/signup:
     post:
       description: API for user to register a new account

@@ -27,7 +27,6 @@ These instructions will help you set up and run the project on your local machin
     ```
      $ docker-compose build
      $ docker-compose up
-     $ docker-compose run --rm migrate
     ```
 
 ### Setup Environment
