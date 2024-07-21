@@ -35,3 +35,8 @@ type ReponseUsers struct {
 	Email      string `json:"email"`
 	Created_at string `json:"created_at"`
 }
+
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
