@@ -9,6 +9,16 @@ definitions:
       username:
         type: string
     type: object
+  utils.LoginBody:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
   utils.Response:
     properties:
       code:
@@ -40,15 +50,22 @@ info:
   description: This is a sample server for Backend API.
   title: Backend API with Go-Wire
 paths:
-  /api/user/me:
-    get:
-      description: API for user to get their own profile
-      operationId: UserMe
+  /api/auth/login:
+    post:
+      description: API for user to login
+      operationId: UserLogin
+      parameters:
+      - description: Input Fields
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/utils.LoginBody'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Response'
+            $ref: '#/definitions/utils.Response'
         "400":
           description: Bad Request
           schema:
@@ -61,12 +78,10 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
-      security:
-      - Bearer: []
-      summary: Get User Profile
+      summary: Login (User)
       tags:
       - User
-  /api/user/signup:
+  /api/auth/signup:
     post:
       description: API for user to register a new account
       operationId: UserSignUp
@@ -95,6 +110,32 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       summary: Signup (User)
+      tags:
+      - User
+  /api/user/me:
+    get:
+      description: API for user to get their own profile
+      operationId: UserMe
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: Get User Profile
       tags:
       - User
 securityDefinitions:
