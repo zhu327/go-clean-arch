@@ -35,7 +35,7 @@ func NewUserHandler(userUserCase services.UserUseCase) *UserHandler {
 //	@Id				UserSignUp
 //	@Tags			User
 //	@Param			input	body utils.UserSignUp	true	"Input Fields"
-//	@Router			/api/user/signup [post]
+//	@Router			/api/auth/signup [post]
 //	@Success		200	{object}	utils.Response{}
 //	@Failure		400	{object}	utils.Response{}
 //	@Failure		409	{object}	utils.Response{}
@@ -103,8 +103,8 @@ func (cr *UserHandler) UserMe(c *gin.Context) {
 //	@Description	API for user to login
 //	@Id				UserLogin
 //	@Tags			User
-//	@Param			input	body utils.UserLogin	true	"Input Fields"
-//	@Router			/api/login [post]
+//	@Param			input	body utils.LoginBody	true	"Input Fields"
+//	@Router			/api/auth/login [post]
 //	@Success		200	{object}	utils.Response{}
 //	@Failure		400	{object}	utils.Response{}
 //	@Failure		401	{object}	utils.Response{}
@@ -117,19 +117,18 @@ func (cr *UserHandler) UserLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	userID, err := cr.userUserCase.FindByEmail(c.Request.Context(), body.Email)
+	user, err := cr.userUserCase.FindByEmail(c.Request.Context(), body.Email)
 	if err != nil {
 		response := utils.ErrorResponse(400, "Error: Email not found", err.Error(), body)
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
-	err = utils.ValidatePassword(body.Password, userID.Password)
+	err = utils.ValidatePassword(body.Password, user.Password)
 	if err != nil {
 		response := utils.ErrorResponse(400, "Error: Password not match", err.Error(), body)
 		c.JSON(http.StatusBadRequest, response)
 	}
-	cr.GenerateTokens(c, userID.ID)
-
+	cr.GenerateTokens(c, user.ID)
 }
 
 // Common Function for Token generation 

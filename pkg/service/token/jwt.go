@@ -3,7 +3,6 @@ package token
 import (
 	"fmt"
 	"go-wire/pkg/config"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -20,21 +19,14 @@ func NewTokenService (cfg config.Config) TokenService {
 	}
 }
 
-type jwtClaims struct {
-	TokenID string
-	UserID uint
-	ExpireAt time.Time
-}
-
 // Generate a new JWT token string
 func (c *jwtAuth) GenerateToken(req GenerateTokenRequest)(GenerateTokenResponse, error){
 	tokenID := uuid.NewString()
-	claims := jwtClaims{
-		TokenID: tokenID,
-		UserID: req.UserID,
-		ExpireAt: req.ExpireAt,
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := make(jwt.MapClaims)
+	claims["exp"] = req.ExpireAt.Unix()
+	claims["UserID"] = req.UserID
+	token.Claims = claims
 
 	var (
 		tokenString string

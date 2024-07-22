@@ -42,5 +42,21 @@ func (c *UserUseCase) GenerateAccessToken(ctx context.Context, tokenParams servi
 		ExpireAt: time.Now().Add(time.Minute * 20),
 	}
 	tokenResponse, err := c.tokenService.GenerateToken(tokenRequest)
+	if err != nil {
+		return "", err
+	}
+	return tokenResponse.TokenString, err
+}
+
+func (c *UserUseCase) GenerateRefreshToken(ctx context.Context, tokenParams services.GenerateTokenParams) (tokenString string, err error){
+	expiredAt := time.Now().Add(time.Hour * 24 * 7)
+	tokenRequest := token.GenerateTokenRequest{
+		UserID: tokenParams.UserID,
+		ExpireAt: expiredAt,
+	}
+	tokenResponse, err := c.tokenService.GenerateToken(tokenRequest)
+	if err != nil {
+		return "", err
+	}
 	return tokenResponse.TokenString, err
 }

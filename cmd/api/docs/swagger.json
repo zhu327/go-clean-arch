@@ -10,24 +10,30 @@
     },
     "basePath": "/",
     "paths": {
-        "/api/user/me": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "API for user to get their own profile",
+        "/api/auth/login": {
+            "post": {
+                "description": "API for user to login",
                 "tags": [
                     "User"
                 ],
-                "summary": "Get User Profile",
-                "operationId": "UserMe",
+                "summary": "Login (User)",
+                "operationId": "UserLogin",
+                "parameters": [
+                    {
+                        "description": "Input Fields",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/utils.LoginBody"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.Response"
+                            "$ref": "#/definitions/utils.Response"
                         }
                     },
                     "400": {
@@ -51,7 +57,7 @@
                 }
             }
         },
-        "/api/user/signup": {
+        "/api/auth/signup": {
             "post": {
                 "description": "API for user to register a new account",
                 "tags": [
@@ -97,6 +103,47 @@
                     }
                 }
             }
+        },
+        "/api/user/me": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "API for user to get their own profile",
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get User Profile",
+                "operationId": "UserMe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -110,6 +157,21 @@
                     "type": "integer"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.LoginBody": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 }
             }

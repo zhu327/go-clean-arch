@@ -9,6 +9,7 @@ import (
 	"go-wire/pkg/config"
 	"go-wire/pkg/db"
 	"go-wire/pkg/repository"
+	"go-wire/pkg/service/token"
 	"go-wire/pkg/usecase"
 
 	"github.com/google/wire"
@@ -18,6 +19,7 @@ func InitailizeApi(config config.Config) (*http.ServerHTTP, error) {
 
 	wire.Build(
 		db.ConnectDatabase,
+		token.NewTokenService,
 		//repository
 		repository.NewUserRepository,
 
