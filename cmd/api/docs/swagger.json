@@ -14,7 +14,7 @@
             "post": {
                 "description": "API for user to login",
                 "tags": [
-                    "User"
+                    "Auth"
                 ],
                 "summary": "Login (User)",
                 "operationId": "UserLogin",
@@ -61,7 +61,7 @@
             "post": {
                 "description": "API for user to register a new account",
                 "tags": [
-                    "User"
+                    "Auth"
                 ],
                 "summary": "Signup (User)",
                 "operationId": "UserSignUp",

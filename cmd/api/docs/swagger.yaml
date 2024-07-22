@@ -80,7 +80,7 @@ paths:
             $ref: '#/definitions/utils.Response'
       summary: Login (User)
       tags:
-      - User
+      - Auth
   /api/auth/signup:
     post:
       description: API for user to register a new account
@@ -111,7 +111,7 @@ paths:
             $ref: '#/definitions/utils.Response'
       summary: Signup (User)
       tags:
-      - User
+      - Auth
   /api/user/me:
     get:
       description: API for user to get their own profile

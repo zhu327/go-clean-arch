@@ -22,7 +22,7 @@ const docTemplate = `{
             "post": {
                 "description": "API for user to login",
                 "tags": [
-                    "User"
+                    "Auth"
                 ],
                 "summary": "Login (User)",
                 "operationId": "UserLogin",
@@ -69,7 +69,7 @@ const docTemplate = `{
             "post": {
                 "description": "API for user to register a new account",
                 "tags": [
-                    "User"
+                    "Auth"
                 ],
                 "summary": "Signup (User)",
                 "operationId": "UserSignUp",

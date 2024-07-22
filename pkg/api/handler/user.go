@@ -33,7 +33,7 @@ func NewUserHandler(userUserCase services.UserUseCase) *UserHandler {
 //	@Summary		Signup (User)
 //	@Description	API for user to register a new account
 //	@Id				UserSignUp
-//	@Tags			User
+//	@Tags			Auth
 //	@Param			input	body utils.UserSignUp	true	"Input Fields"
 //	@Router			/api/auth/signup [post]
 //	@Success		200	{object}	utils.Response{}
@@ -102,7 +102,7 @@ func (cr *UserHandler) UserMe(c *gin.Context) {
 //	@Summary		Login (User)
 //	@Description	API for user to login
 //	@Id				UserLogin
-//	@Tags			User
+//	@Tags			Auth
 //	@Param			input	body utils.LoginBody	true	"Input Fields"
 //	@Router			/api/auth/login [post]
 //	@Success		200	{object}	utils.Response{}
