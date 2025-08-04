@@ -28,7 +28,7 @@ graph TD
 
     subgraph "Adapter Layer"
         subgraph "Delivery"
-            HTTP[HTTP Handlers<br/>(e.g., Gin, Echo)]
+            HTTP["HTTP Handlers<br/>(e.g., Gin, Echo)"]
             gRPC[gRPC Handlers]
         end
         
@@ -57,7 +57,7 @@ graph TD
         Entities[Domain Entities<br/>SubDomain, User]
         ValueObjects[Value Objects<br/>Status, Types]
         DomainServices[Domain Service<br/>Interfaces]
-        BusinessRules[Business Rules<br/>& Validation]
+        BusinessRules["Business Rules<br/>& Validation"]
     end
 
     %% External connections
