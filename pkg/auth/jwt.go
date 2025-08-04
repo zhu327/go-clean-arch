@@ -1,26 +1,26 @@
-package token
+package auth
 
 import (
 	"fmt"
-	"go-wire/pkg/config"
+
+	"go-clean-arch/pkg/config"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-type jwtAuth struct {
+type jwtService struct {
 	userSecretKey string
 }
 
-
-func NewTokenService (cfg config.Config) TokenService {
-	return &jwtAuth{
+func NewTokenService(cfg config.Config) TokenService {
+	return &jwtService{
 		userSecretKey: cfg.SECRET_KEY,
 	}
 }
 
 // Generate a new JWT token string
-func (c *jwtAuth) GenerateToken(req GenerateTokenRequest)(GenerateTokenResponse, error){
+func (c *jwtService) GenerateToken(req GenerateTokenRequest) (GenerateTokenResponse, error) {
 	tokenID := uuid.NewString()
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := make(jwt.MapClaims)
@@ -30,7 +30,7 @@ func (c *jwtAuth) GenerateToken(req GenerateTokenRequest)(GenerateTokenResponse,
 
 	var (
 		tokenString string
-		err			error
+		err         error
 	)
 	tokenString, err = token.SignedString([]byte(c.userSecretKey))
 	if err != nil {
@@ -38,7 +38,7 @@ func (c *jwtAuth) GenerateToken(req GenerateTokenRequest)(GenerateTokenResponse,
 	}
 
 	response := GenerateTokenResponse{
-		TokenID: tokenID,
+		TokenID:     tokenID,
 		TokenString: tokenString,
 	}
 

@@ -3,24 +3,25 @@ package repository
 import (
 	"context"
 	"errors"
-	"go-wire/pkg/domain"
-	interfaces "go-wire/pkg/repository/interface"
+
+	"go-clean-arch/internal/domain"
+	"go-clean-arch/internal/usecase/iface"
 
 	"gorm.io/gorm"
 )
 
-type userDatabase struct {
+type UserRepository struct {
 	DB *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) interfaces.UserRepository {
-	return &userDatabase{
+func NewUserRepository(db *gorm.DB) iface.UserRepository {
+	return &UserRepository{
 		DB: db,
 	}
 }
 
 // find whether email is already registered
-func (c *userDatabase) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+func (c *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
 	var user domain.User
 	_ = c.DB.Where(("Email = ?"), email).First(&user)
 	if user.ID == 0 {
@@ -30,7 +31,7 @@ func (c *userDatabase) FindByEmail(ctx context.Context, email string) (domain.Us
 }
 
 // find user by id
-func (c *userDatabase) FindByID(ctx context.Context, id uint) (domain.User, error) {
+func (c *UserRepository) FindByID(ctx context.Context, id uint) (domain.User, error) {
 	var user domain.User
 	_ = c.DB.Where(("ID = ?"), id).First(&user)
 	if user.ID == 0 {
@@ -40,7 +41,7 @@ func (c *userDatabase) FindByID(ctx context.Context, id uint) (domain.User, erro
 }
 
 // create new user
-func (c *userDatabase) SignUpUser(ctx context.Context, user domain.User) (domain.User, error) {
+func (c *UserRepository) SignUpUser(ctx context.Context, user domain.User) (domain.User, error) {
 	err := c.DB.Create(&user).Error
 	if err != nil {
 		return domain.User{}, err

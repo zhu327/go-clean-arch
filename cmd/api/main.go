@@ -1,13 +1,13 @@
 package main
 
 import (
-	"go-wire/pkg/config"
-	"go-wire/pkg/di"
 	"log"
+
+	"go-clean-arch/internal/di"
+	"go-clean-arch/pkg/config"
 )
 
 func main() {
-
 	config, error := config.LoadConfig()
 
 	if error != nil {
@@ -15,13 +15,11 @@ func main() {
 	}
 
 	server, err := di.InitailizeApi(config)
-
 	if err != nil {
 		log.Fatal("error initializing server: ", err)
 	}
 
-	if server.Start() != nil {
+	if err := server.Start(); err != nil {
 		log.Fatal("error starting server: ", err)
 	}
-
 }

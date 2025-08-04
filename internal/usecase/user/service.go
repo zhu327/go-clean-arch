@@ -1,22 +1,22 @@
-package usecase
+package user
 
 import (
 	"context"
-	"go-wire/pkg/domain"
-	interfaces "go-wire/pkg/repository/interface"
-	"go-wire/pkg/service/token"
-	services "go-wire/pkg/usecase/interface"
 	"time"
+
+	"go-clean-arch/internal/domain"
+	"go-clean-arch/internal/usecase/iface"
+	auth "go-clean-arch/pkg/auth"
 )
 
 type UserUseCase struct {
-	userRepo interfaces.UserRepository
-	tokenService token.TokenService
+	userRepo     iface.UserRepository
+	tokenService auth.TokenService
 }
 
-func NewUserUseCase(userRepo interfaces.UserRepository, tokenService token.TokenService) services.UserUseCase {
+func NewUserUseCase(userRepo iface.UserRepository, tokenService auth.TokenService) iface.UserUseCase {
 	return &UserUseCase{
-		userRepo: userRepo,
+		userRepo:     userRepo,
 		tokenService: tokenService,
 	}
 }
@@ -36,9 +36,14 @@ func (c *UserUseCase) FindByEmail(ctx context.Context, email string) (domain.Use
 	return users, err
 }
 
-func (c *UserUseCase) GenerateAccessToken(ctx context.Context, tokenParams services.GenerateTokenParams) (tokenString string, err error) {
-	tokenRequest := token.GenerateTokenRequest{
-		UserID: tokenParams.UserID,
+func (c *UserUseCase) GenerateAccessToken(
+	ctx context.Context,
+	tokenParams iface.GenerateTokenParams,
+) (tokenString string,
+	err error,
+) {
+	tokenRequest := auth.GenerateTokenRequest{
+		UserID:   tokenParams.UserID,
 		ExpireAt: time.Now().Add(time.Minute * 20),
 	}
 	tokenResponse, err := c.tokenService.GenerateToken(tokenRequest)
@@ -48,10 +53,15 @@ func (c *UserUseCase) GenerateAccessToken(ctx context.Context, tokenParams servi
 	return tokenResponse.TokenString, err
 }
 
-func (c *UserUseCase) GenerateRefreshToken(ctx context.Context, tokenParams services.GenerateTokenParams) (tokenString string, err error){
+func (c *UserUseCase) GenerateRefreshToken(
+	ctx context.Context,
+	tokenParams iface.GenerateTokenParams,
+) (tokenString string,
+	err error,
+) {
 	expiredAt := time.Now().Add(time.Hour * 24 * 7)
-	tokenRequest := token.GenerateTokenRequest{
-		UserID: tokenParams.UserID,
+	tokenRequest := auth.GenerateTokenRequest{
+		UserID:   tokenParams.UserID,
 		ExpireAt: expiredAt,
 	}
 	tokenResponse, err := c.tokenService.GenerateToken(tokenRequest)

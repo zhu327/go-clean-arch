@@ -1,7 +1,7 @@
-package routes
+package router
 
 import (
-	"go-wire/pkg/api/handler"
+	"go-clean-arch/internal/adapter/delivery/http/handler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,5 +19,4 @@ func UserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler) {
 	{
 		user.GET("/me", userHandler.UserMe)
 	}
-
 }

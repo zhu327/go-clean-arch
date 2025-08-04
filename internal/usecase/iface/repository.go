@@ -1,8 +1,9 @@
-package interfaces
+package iface
 
 import (
 	"context"
-	"go-wire/pkg/domain"
+
+	"go-clean-arch/internal/domain"
 )
 
 type UserRepository interface {

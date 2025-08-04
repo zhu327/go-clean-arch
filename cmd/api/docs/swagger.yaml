@@ -1,6 +1,43 @@
-basePath: /
 definitions:
-  handler.Response:
+  go-clean-arch_internal_adapter_delivery_http_dto.LoginBody:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 25
+        minLength: 5
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  go-clean-arch_internal_adapter_delivery_http_dto.Response:
+    properties:
+      data: {}
+      error: {}
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
+  go-clean-arch_internal_adapter_delivery_http_dto.UserSignUp:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 25
+        minLength: 5
+        type: string
+      username:
+        maxLength: 15
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  internal_adapter_delivery_http_handler.Response:
     properties:
       email:
         type: string
@@ -9,46 +46,8 @@ definitions:
       username:
         type: string
     type: object
-  utils.LoginBody:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  utils.Response:
-    properties:
-      code:
-        type: integer
-      data: {}
-      error: {}
-      message:
-        type: string
-      status:
-        type: integer
-    type: object
-  utils.UserSignUp:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      username:
-        type: string
-    required:
-    - email
-    - password
-    - username
-    type: object
 info:
-  contact:
-    email: susiltiwari750@gmail.com
-    name: For API Support
-  description: This is a sample server for Backend API.
-  title: Backend API with Go-Wire
+  contact: {}
 paths:
   /api/auth/login:
     post:
@@ -60,24 +59,24 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/utils.LoginBody'
+          $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.LoginBody'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
       summary: Login (User)
       tags:
       - Auth
@@ -91,24 +90,24 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/utils.UserSignUp'
+          $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.UserSignUp'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
       summary: Signup (User)
       tags:
       - Auth
@@ -120,28 +119,22 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.Response'
+            $ref: '#/definitions/internal_adapter_delivery_http_handler.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.Response'
+            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
       security:
       - Bearer: []
       summary: Get User Profile
       tags:
       - User
-securityDefinitions:
-  BearerAuth:
-    description: 'Add prefix of Bearer before  token Ex: "Bearer token"'
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

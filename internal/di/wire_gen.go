@@ -7,13 +7,13 @@
 package di
 
 import (
-	"go-wire/pkg/api"
-	"go-wire/pkg/api/handler"
-	"go-wire/pkg/config"
-	"go-wire/pkg/db"
-	"go-wire/pkg/repository"
-	"go-wire/pkg/service/token"
-	"go-wire/pkg/usecase"
+	"go-clean-arch/internal/adapter/delivery/http"
+	"go-clean-arch/internal/adapter/delivery/http/handler"
+	"go-clean-arch/internal/adapter/repository"
+	"go-clean-arch/internal/usecase/user"
+	"go-clean-arch/pkg/auth"
+	"go-clean-arch/pkg/config"
+	"go-clean-arch/pkg/db"
 )
 
 // Injectors from wire.go:
@@ -24,8 +24,8 @@ func InitailizeApi(config2 config.Config) (*http.ServerHTTP, error) {
 		return nil, err
 	}
 	userRepository := repository.NewUserRepository(gormDB)
-	tokenService := token.NewTokenService(config2)
-	userUseCase := usecase.NewUserUseCase(userRepository, tokenService)
+	tokenService := auth.NewTokenService(config2)
+	userUseCase := user.NewUserUseCase(userRepository, tokenService)
 	userHandler := handler.NewUserHandler(userUseCase)
 	serverHTTP := http.NewServerHTTP(userHandler)
 	return serverHTTP, nil

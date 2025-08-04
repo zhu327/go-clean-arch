@@ -21,14 +21,12 @@ var envs = []string{
 }
 
 func LoadConfig() (config Config, err error) {
-
-	//read .env file
+	// read .env file
 	viper.AddConfigPath("./")
 	viper.SetConfigFile(".env")
 	err = viper.ReadInConfig()
-
 	if err != nil {
-		//binding
+		// binding
 		for _, env := range envs {
 			if err := viper.BindEnv(env); err != nil {
 				return config, err
