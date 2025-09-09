@@ -25,7 +25,7 @@ func (c *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	var userModel UserModel
 	if err := c.DB.WithContext(ctx).Where("email = ?", email).First(&userModel).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.User{}, errors.New("user not found")
+			return domain.User{}, iface.ErrUserNotFound
 		}
 		return domain.User{}, err
 	}
@@ -39,7 +39,7 @@ func (c *UserRepository) FindByID(ctx context.Context, id uint) (domain.User, er
 	var userModel UserModel
 	if err := c.DB.WithContext(ctx).Where("id = ?", id).First(&userModel).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.User{}, errors.New("user not found")
+			return domain.User{}, iface.ErrUserNotFound
 		}
 		return domain.User{}, err
 	}

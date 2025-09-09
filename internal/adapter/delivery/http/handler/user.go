@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"go-clean-arch/internal/adapter/delivery/http/dto"
+	"go-clean-arch/internal/domain"
 	"go-clean-arch/internal/usecase/iface"
 
 	"github.com/gin-gonic/gin"
@@ -56,9 +58,18 @@ func (h *UserHandler) UserSignUp(c *gin.Context) {
 	// 只调用一个方法
 	user, err := h.userUserCase.SignUpUser(c.Request.Context(), params)
 	if err != nil {
-		// 根据 use case 返回的错误类型决定 HTTP 状态码
-		if err.Error() == "email already exists" {
+		// 使用 errors.Is 进行健壮的错误判断
+		if errors.Is(err, iface.ErrUserAlreadyExists) {
 			c.JSON(http.StatusConflict, dto.ErrorResponse(http.StatusConflict, err.Error(), err.Error(), nil))
+			return
+		}
+		// 处理领域验证错误
+		if errors.Is(err, domain.ErrInvalidEmail) || errors.Is(err, domain.ErrUsernameTooShort) ||
+			errors.Is(err, domain.ErrUsernameTooLong) || errors.Is(err, domain.ErrEmptyPassword) {
+			c.JSON(
+				http.StatusBadRequest,
+				dto.ErrorResponse(http.StatusBadRequest, "Validation failed", err.Error(), nil),
+			)
 			return
 		}
 		c.JSON(
@@ -132,7 +143,18 @@ func (h *UserHandler) UserLogin(c *gin.Context) {
 
 	tokens, err := h.userUserCase.Login(c.Request.Context(), params)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse(http.StatusUnauthorized, "Login failed", err.Error(), nil))
+		if errors.Is(err, iface.ErrInvalidCredentials) {
+			c.JSON(
+				http.StatusUnauthorized,
+				dto.ErrorResponse(http.StatusUnauthorized, "Login failed", err.Error(), nil),
+			)
+			return
+		}
+		// 其他错误（如token生成失败）返回500
+		c.JSON(
+			http.StatusInternalServerError,
+			dto.ErrorResponse(http.StatusInternalServerError, "Internal server error", err.Error(), nil),
+		)
 		return
 	}
 
