@@ -22,29 +22,38 @@ func NewUserRepository(db *gorm.DB) iface.UserRepository {
 
 // find whether email is already registered
 func (c *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
-	var user domain.User
-	_ = c.DB.Where(("Email = ?"), email).First(&user)
-	if user.ID == 0 {
-		return domain.User{}, errors.New("user not found")
+	var userModel UserModel
+	if err := c.DB.WithContext(ctx).Where("email = ?", email).First(&userModel).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.User{}, errors.New("user not found")
+		}
+		return domain.User{}, err
 	}
-	return user, nil
+
+	// 返回转换后的 domain 实体
+	return *userModel.toDomain(), nil
 }
 
 // find user by id
 func (c *UserRepository) FindByID(ctx context.Context, id uint) (domain.User, error) {
-	var user domain.User
-	_ = c.DB.Where(("ID = ?"), id).First(&user)
-	if user.ID == 0 {
-		return domain.User{}, errors.New("user not found")
+	var userModel UserModel
+	if err := c.DB.WithContext(ctx).Where("id = ?", id).First(&userModel).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.User{}, errors.New("user not found")
+		}
+		return domain.User{}, err
 	}
-	return user, nil
+
+	// 返回转换后的 domain 实体
+	return *userModel.toDomain(), nil
 }
 
 // create new user
 func (c *UserRepository) SignUpUser(ctx context.Context, user domain.User) (domain.User, error) {
-	err := c.DB.Create(&user).Error
-	if err != nil {
+	userModel := fromDomain(user)
+	if err := c.DB.WithContext(ctx).Create(&userModel).Error; err != nil {
 		return domain.User{}, err
 	}
-	return user, nil
+	// 返回创建后包含 ID 和时间戳的 domain 实体
+	return *userModel.toDomain(), nil
 }

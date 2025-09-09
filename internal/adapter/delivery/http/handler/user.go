@@ -5,12 +5,9 @@ import (
 	"strconv"
 
 	"go-clean-arch/internal/adapter/delivery/http/dto"
-	"go-clean-arch/internal/domain"
 	"go-clean-arch/internal/usecase/iface"
-	"go-clean-arch/pkg/crypto"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/copier"
 )
 
 type UserHandler struct {
@@ -41,36 +38,43 @@ func NewUserHandler(userUserCase iface.UserUseCase) *UserHandler {
 //	@Failure		400		{object}	dto.Response{}
 //	@Failure		409		{object}	dto.Response{}
 //	@Failure		500		{object}	dto.Response{}
-func (cr *UserHandler) UserSignUp(c *gin.Context) {
+func (h *UserHandler) UserSignUp(c *gin.Context) {
 	var body dto.UserSignUp
-
 	if err := c.BindJSON(&body); err != nil {
-		response := dto.ErrorResponse(400, "Error: Failed to bind JSON", err.Error(), body)
-		c.JSON(http.StatusBadRequest, response)
-		return
-	}
-	var userBody domain.User
-	if err := copier.Copy(&userBody, &body); err != nil {
-		response := dto.ErrorResponse(http.StatusInternalServerError, "Error: Failed to copy data", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, response)
-		return
-	}
-
-	if _, err := cr.userUserCase.FindByEmail(c.Request.Context(), body.Email); err == nil {
-		response := dto.ErrorResponse(http.StatusBadRequest, "Error: Email already exist", "", nil)
+		response := dto.ErrorResponse(http.StatusBadRequest, "Error: Failed to bind JSON", err.Error(), body)
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
 
-	body.Password, _ = crypto.HashPassword(body.Password)
-	_, err := cr.userUserCase.SignUpUser(c.Request.Context(), userBody)
+	// 将 handler DTO 转换为 use case 参数
+	params := iface.SignUpUserParams{
+		Username: body.Username,
+		Email:    body.Email,
+		Password: body.Password,
+	}
+
+	// 只调用一个方法
+	user, err := h.userUserCase.SignUpUser(c.Request.Context(), params)
 	if err != nil {
-		response := dto.ErrorResponse(400, "Error: Failed to create user", err.Error(), body)
-		c.JSON(http.StatusBadRequest, response)
+		// 根据 use case 返回的错误类型决定 HTTP 状态码
+		if err.Error() == "email already exists" {
+			c.JSON(http.StatusConflict, dto.ErrorResponse(http.StatusConflict, err.Error(), err.Error(), nil))
+			return
+		}
+		c.JSON(
+			http.StatusBadRequest,
+			dto.ErrorResponse(http.StatusBadRequest, "Failed to create user", err.Error(), nil),
+		)
 		return
 	}
-	response := dto.SuccessResponse(200, "Success: User created", body)
-	c.JSON(http.StatusOK, response)
+
+	// 成功响应，注意不要返回密码
+	userResponse := Response{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(http.StatusOK, "User created", userResponse))
 }
 
 // UserMe godoc
@@ -113,50 +117,24 @@ func (cr *UserHandler) UserMe(c *gin.Context) {
 //	@Failure		400		{object}	dto.Response{}
 //	@Failure		401		{object}	dto.Response{}
 //	@Failure		500		{object}	dto.Response{}
-func (cr *UserHandler) UserLogin(c *gin.Context) {
+func (h *UserHandler) UserLogin(c *gin.Context) {
 	var body dto.LoginBody
-
 	if err := c.BindJSON(&body); err != nil {
-		response := dto.ErrorResponse(400, "Error: Failed to bind JSON", err.Error(), body)
-		c.JSON(http.StatusBadRequest, response)
-		return
-	}
-	user, err := cr.userUserCase.FindByEmail(c.Request.Context(), body.Email)
-	if err != nil {
-		response := dto.ErrorResponse(400, "Error: Email not found", err.Error(), body)
-		c.JSON(http.StatusBadRequest, response)
-		return
-	}
-	err = crypto.ValidatePassword(body.Password, user.Password)
-	if err != nil {
-		response := dto.ErrorResponse(400, "Error: Password not match", err.Error(), body)
-		c.JSON(http.StatusBadRequest, response)
-	}
-	cr.GenerateTokens(c, user.ID)
-}
-
-// Common Function for Token generation
-func (cr *UserHandler) GenerateTokens(c *gin.Context, userID uint) {
-	params := iface.GenerateTokenParams{
-		UserID: userID,
-	}
-	accessToken, err := cr.userUserCase.GenerateAccessToken(c.Request.Context(), params)
-	if err != nil {
-		response := dto.ErrorResponse(500, "Error: Failed to generate access token", err.Error(), nil)
+		response := dto.ErrorResponse(http.StatusBadRequest, "Error: Failed to bind JSON", err.Error(), body)
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
 
-	refreshToken, err := cr.userUserCase.GenerateRefreshToken(c.Request.Context(), params)
-	if err != nil {
-		response := dto.ErrorResponse(400, "Error: Failed to generate access token", err.Error(), nil)
-		c.JSON(http.StatusBadGateway, response)
+	params := iface.LoginParams{
+		Email:    body.Email,
+		Password: body.Password,
 	}
 
-	tokenResponse := dto.TokenResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+	tokens, err := h.userUserCase.Login(c.Request.Context(), params)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse(http.StatusUnauthorized, "Login failed", err.Error(), nil))
+		return
 	}
-	response := dto.SuccessResponse(http.StatusOK, "Success", tokenResponse)
-	c.JSON(http.StatusOK, response)
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(http.StatusOK, "Login successful", tokens))
 }
