@@ -1,0 +1,359 @@
+---
+description: Testing standards - TDD workflow, table-driven tests, mock generation, assertions
+globs: "**/*_test.go"
+alwaysApply: false
+---
+
+# Testing Standards
+
+## TDD Workflow
+
+Follow the **Red-Green-Refactor** cycle, target coverage **80%+**:
+
+1. **RED**: Write the test first, run it (it should fail)
+2. **GREEN**: Write minimal implementation to make the test pass
+3. **REFACTOR**: Refactor code while keeping tests green
+4. **VERIFY**: Run `make cov` to verify coverage
+
+```bash
+# TDD cycle commands
+make test    # Run tests
+make cov     # Generate coverage report (target 80%+)
+make mock    # Regenerate mocks
+```
+
+## Table-Driven Tests
+
+```go
+func TestUserManager_FindByID(t *testing.T) {
+    tests := []struct {
+        name        string
+        userID      uint
+        mockSetup   func(*mock.MockUserRepository)
+        wantErr     bool
+        errContains string
+    }{
+        {
+            name:   "successfully find user",
+            userID: 1,
+            mockSetup: func(m *mock.MockUserRepository) {
+                m.EXPECT().
+                    FindByID(gomock.Any(), uint(1)).
+                    Return(domain.User{ID: 1, Username: "alice"}, nil)
+            },
+            wantErr: false,
+        },
+        {
+            name:   "user not found",
+            userID: 999,
+            mockSetup: func(m *mock.MockUserRepository) {
+                m.EXPECT().
+                    FindByID(gomock.Any(), uint(999)).
+                    Return(domain.User{}, usecase.ErrUserNotFound)
+            },
+            wantErr:     true,
+            errContains: "not found",
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            ctrl := gomock.NewController(t)
+            defer ctrl.Finish()
+
+            mockRepo := mock.NewMockUserRepository(ctrl)
+            tt.mockSetup(mockRepo)
+
+            manager := usecase.NewUserManager(mockRepo, nil)
+            result, err := manager.FindByID(context.Background(), tt.userID)
+
+            if tt.wantErr {
+                assert.Error(t, err)
+                if tt.errContains != "" {
+                    assert.Contains(t, err.Error(), tt.errContains)
+                }
+            } else {
+                assert.NoError(t, err)
+                assert.NotNil(t, result)
+            }
+        })
+    }
+}
+```
+
+## Mock Generation
+
+Add at the top of `interfaces.go`:
+
+```go
+//go:generate mockgen -source=interfaces.go -destination=mock/interfaces.go -package=mock
+```
+
+Run the generation command:
+
+```bash
+make mock
+```
+
+## Test Function Naming
+
+```go
+// Format: Test{Struct}_{Method}_{Scenario}
+func TestUserManager_FindByID_Success(t *testing.T)
+func TestUserManager_FindByID_NotFound(t *testing.T)
+func TestUserManager_SignUp_DuplicateEmail(t *testing.T)
+
+// Or use table-driven tests with a single function name
+func TestUserManager_FindByID(t *testing.T)
+```
+
+## Assertions
+
+Use testify assertions:
+
+```go
+import (
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
+)
+
+// assert: continues execution after failure
+assert.Equal(t, expected, actual)
+assert.NotNil(t, result)
+assert.Error(t, err)
+assert.NoError(t, err)
+assert.Contains(t, str, substring)
+assert.Len(t, slice, 5)
+
+// require: terminates immediately on failure
+require.NoError(t, err)  // Critical checkpoint
+require.NotNil(t, result)
+```
+
+## Mock Usage
+
+```go
+import (
+    "go.uber.org/mock/gomock"
+    "go-clean-arch/internal/user/usecase/mock"
+)
+
+func TestExample(t *testing.T) {
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    mockRepo := mock.NewMockUserRepository(ctrl)
+
+    // Set expectations
+    mockRepo.EXPECT().
+        FindByID(gomock.Any(), uint(1)).
+        Return(domain.User{ID: 1}, nil).
+        Times(1)
+
+    // gomock.Any() matches any argument
+    // Times(1) expects exactly 1 call
+    // AnyTimes() allows any number of calls
+}
+```
+
+## Test Helper Functions
+
+```go
+// Create a test context
+func testContext() context.Context {
+    return context.Background()
+}
+
+// Create test data
+func newTestUser() *domain.User {
+    return &domain.User{
+        ID:       1,
+        Username: "testuser",
+        Email:    "test@example.com",
+    }
+}
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run tests for a specific package
+go test ./internal/user/usecase/...
+
+# Run a specific test
+go test -run TestUserManager_FindByID ./internal/user/usecase/
+
+# Generate coverage report
+make cov
+```
+
+## HTTP Handler Integration Tests
+
+Use `httptest` and `gin.TestMode` to test handlers:
+
+```go
+import (
+    "net/http"
+    "net/http/httptest"
+    "testing"
+
+    "github.com/gin-gonic/gin"
+    "github.com/stretchr/testify/assert"
+    "go.uber.org/mock/gomock"
+)
+
+func TestUserHandler_Me(t *testing.T) {
+    gin.SetMode(gin.TestMode)
+
+    tests := []struct {
+        name       string
+        userID     string
+        mockSetup  func(*mock.MockUserRepository)
+        wantStatus int
+    }{
+        {
+            name:   "successfully get user profile",
+            userID: "1",
+            mockSetup: func(m *mock.MockUserRepository) {
+                m.EXPECT().
+                    FindByID(gomock.Any(), uint(1)).
+                    Return(domain.User{ID: 1, Username: "alice"}, nil)
+            },
+            wantStatus: http.StatusOK,
+        },
+        {
+            name:   "user not found",
+            userID: "999",
+            mockSetup: func(m *mock.MockUserRepository) {
+                m.EXPECT().
+                    FindByID(gomock.Any(), uint(999)).
+                    Return(domain.User{}, usecase.ErrUserNotFound)
+            },
+            wantStatus: http.StatusNotFound,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            ctrl := gomock.NewController(t)
+            defer ctrl.Finish()
+
+            mockRepo := mock.NewMockUserRepository(ctrl)
+            tt.mockSetup(mockRepo)
+
+            manager := usecase.NewUserManager(mockRepo, nil)
+            handler := handler.NewUserHandler(manager)
+
+            router := gin.New()
+            router.GET("/api/user/me", handler.Me)
+
+            req := httptest.NewRequest("GET", "/api/user/me?id="+tt.userID, nil)
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tt.wantStatus, w.Code)
+        })
+    }
+}
+```
+
+## Test Data Factories
+
+Create reusable test data generator functions:
+
+```go
+// Basic factory function
+func newTestUser(id uint) *domain.User {
+    return &domain.User{
+        ID:        id,
+        Username:  "testuser",
+        Email:     "test@example.com",
+        CreatedAt: time.Now(),
+    }
+}
+
+// Factory with options
+type UserOption func(*domain.User)
+
+func WithEmail(email string) UserOption {
+    return func(u *domain.User) {
+        u.Email = email
+    }
+}
+
+func newTestUserWithOptions(id uint, opts ...UserOption) *domain.User {
+    user := newTestUser(id)
+    for _, opt := range opts {
+        opt(user)
+    }
+    return user
+}
+
+// Usage
+user := newTestUserWithOptions(1, WithEmail("custom@example.com"))
+```
+
+## Test Manager Helper
+
+```go
+// Create a test Manager with mocks
+func createTestUserManager(t *testing.T) (
+    *usecase.UserManager,
+    *mock.MockUserRepository,
+    *gomock.Controller,
+) {
+    ctrl := gomock.NewController(t)
+    mockRepo := mock.NewMockUserRepository(ctrl)
+
+    manager := usecase.NewUserManager(mockRepo, nil)
+    return manager, mockRepo, ctrl
+}
+
+// Usage
+func TestUserManager_Method(t *testing.T) {
+    manager, mockRepo, ctrl := createTestUserManager(t)
+    defer ctrl.Finish()
+
+    mockRepo.EXPECT().FindByID(gomock.Any(), uint(1)).Return(domain.User{ID: 1}, nil)
+
+    result, err := manager.FindByID(context.Background(), 1)
+    assert.NoError(t, err)
+}
+```
+
+## Test File Organization
+
+```
+{domain}/
+├── usecase/
+│   ├── {domain}.go
+│   ├── {domain}_test.go      # UseCase unit tests
+│   ├── interfaces.go
+│   └── mock/
+│       └── interfaces.go     # Auto-generated mocks
+└── adapter/
+    ├── delivery/http/
+    │   ├── handler/
+    │   │   ├── {domain}.go
+    │   │   └── {domain}_test.go  # Handler integration tests
+    └── repository/
+        ├── {domain}.go
+        └── {domain}_test.go      # Repository tests
+```
+
+## Coverage Requirements
+
+| Metric | Target |
+|--------|--------|
+| Lines | 80%+ |
+| Functions | 80%+ |
+| Branches | 80%+ |
+| Statements | 80%+ |
+
+```bash
+# Generate and view coverage report
+make cov
+```

@@ -1,0 +1,24 @@
+---
+description: Auto-continue sessions with AskQuestion after task completion and propose next steps.
+alwaysApply: true
+---
+
+# Session Continuation
+
+## Core Rules
+- After every task completion (outputting conclusions/summaries, task results, file changes, or answering questions), you **must call `AskQuestion`** as the final action, unless the user explicitly requests to end the session.
+- If interrupted due to missing critical input, call `AskQuestion` to gather information first, continue execution, then call it again.
+
+## Prohibited Scenarios
+- Do not interrupt mid-step: when reading/writing files, searching, building, testing, or making independent decisions, **do not** call `AskQuestion`.
+
+## Continuation Options (every time)
+- Provide 3-5 options total; must always include a fixed option: **End session**.
+- Suggested structure:
+  - Primary: the most natural next step based on context (1 option)
+  - Additional: related suggestions (1-3 options)
+  - Final: End session
+- Options must be specific and actionable; avoid vague suggestions (e.g., "continue optimizing").
+
+## Termination Condition
+- Only stop when the user selects **End session**; otherwise execute the chosen option and enter the next continuation cycle.

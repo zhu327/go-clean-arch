@@ -4,10 +4,10 @@
 package di
 
 import (
-	"go-clean-arch/internal/adapter/delivery/http"
-	"go-clean-arch/internal/adapter/delivery/http/handler"
-	"go-clean-arch/internal/adapter/repository"
-	"go-clean-arch/internal/usecase/user"
+	delivery "go-clean-arch/internal/shared/adapter/delivery"
+	userHandler "go-clean-arch/internal/user/adapter/delivery/http/handler"
+	userRepo "go-clean-arch/internal/user/adapter/repository"
+	userUsecase "go-clean-arch/internal/user/usecase"
 	"go-clean-arch/pkg/auth"
 	"go-clean-arch/pkg/config"
 	"go-clean-arch/pkg/db"
@@ -15,22 +15,16 @@ import (
 	"github.com/google/wire"
 )
 
-func InitailizeApi(config config.Config) (*http.ServerHTTP, error) {
+// InitializeAPI builds and injects all dependencies, returning the HTTP server.
+func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	wire.Build(
 		db.ConnectDatabase,
 		auth.NewTokenService,
-		// repository
-		repository.NewUserRepository,
-
-		// usecases
-		user.NewUserUseCase,
-
-		// handlers
-		handler.NewUserHandler,
-
-		// http server
-		http.NewServerHTTP,
+		userRepo.NewUserRepository,
+		wire.Bind(new(userUsecase.UserRepository), new(*userRepo.UserRepository)),
+		userUsecase.NewUserManager,
+		userHandler.NewUserHandler,
+		delivery.NewServer,
 	)
-
-	return &http.ServerHTTP{}, nil
+	return &delivery.Server{}, nil
 }

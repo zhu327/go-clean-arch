@@ -1,25 +1,26 @@
 package main
 
 import (
-	"log"
-
 	"go-clean-arch/internal/di"
 	"go-clean-arch/pkg/config"
+	"go-clean-arch/pkg/log"
 )
 
 func main() {
-	config, error := config.LoadConfig()
-
-	if error != nil {
-		log.Fatal("error loading config: ", error)
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Error("failed to load config", "error", err)
+		panic(err)
 	}
 
-	server, err := di.InitailizeApi(config)
+	server, err := di.InitializeAPI(cfg)
 	if err != nil {
-		log.Fatal("error initializing server: ", err)
+		log.Error("failed to initialize server", "error", err)
+		panic(err)
 	}
 
 	if err := server.Start(); err != nil {
-		log.Fatal("error starting server: ", err)
+		log.Error("failed to start server", "error", err)
+		panic(err)
 	}
 }

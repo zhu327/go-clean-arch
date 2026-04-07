@@ -1,0 +1,90 @@
+---
+description: Code style standards - naming, error handling, logging conventions
+alwaysApply: true
+---
+
+# Code Style Standards
+
+## Naming Conventions
+
+| Type | Convention | Example |
+| :--- | :--- | :--- |
+| File name | snake_case | `user_manager.go` |
+| Package name | lowercase word | `usecase`, `repository` |
+| Struct | PascalCase | `UserManager` |
+| Interface | PascalCase + descriptive suffix | `UserRepository`, `PaymentGateway` |
+| Method | PascalCase (exported) / camelCase (private) | `FindByID`, `buildQuery` |
+| Constant | PascalCase | `UserStatusActive` |
+
+## Error Handling
+
+Use `pkg/utils.AppError` for unified business error handling:
+
+```go
+// Correct - use AppError constructors
+return nil, utils.NotFoundError("user not found")
+return nil, utils.BadRequestError("invalid parameter")
+return nil, utils.UnauthorizedError("invalid credentials")
+return nil, utils.ConflictError("user already exists")
+return nil, utils.WrapError(err, "failed to query database")
+
+// Wrong - returning raw errors.New
+return nil, errors.New("not found")
+```
+
+Handler layer uses `c.Error()` to delegate to ErrorHandler middleware:
+
+```go
+// Correct - delegate to middleware
+c.Error(utils.BadRequestError("invalid input"))
+return
+
+// Wrong - manually constructing JSON responses in the handler
+c.JSON(400, gin.H{"error": "invalid input"})
+```
+
+## Logging Standards
+
+Use `pkg/log` for structured logging (based on slog):
+
+```go
+// Correct - structured logging with context fields
+log.Info("user created", "user_id", userID, "email", email)
+log.Error("failed to create user", "error", err, "email", email)
+
+// Wrong - using fmt.Printf or string concatenation
+fmt.Printf("User %s created\n", userID)
+log.Info("User " + userID + " created")
+```
+
+## Code Formatting
+
+- Max line width: **120 characters**
+- Use `make fmt` for formatting (gofumpt + golines)
+- Use `make lint` for static analysis (golangci-lint)
+
+## Context Passing
+
+All business methods must take `ctx context.Context` as their first parameter:
+
+```go
+// Correct
+func (m *UserManager) FindByID(ctx context.Context, id uint) (*domain.User, error)
+
+// Wrong
+func (m *UserManager) FindByID(id uint) (*domain.User, error)
+```
+
+## Comment Standards
+
+- Exported functions/types must have doc comments
+- Complex business logic should include explanatory comments
+- Field comments should explain the business meaning
+
+```go
+// UserManager handles user registration, login, and queries.
+type UserManager struct {
+    // userRepo persists user data
+    userRepo UserRepository
+}
+```

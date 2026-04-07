@@ -1,0 +1,142 @@
+---
+description: UseCase layer development standards - Manager, interface definitions, DTO usage
+globs: "**/usecase/**/*.go"
+alwaysApply: false
+---
+
+# UseCase Layer Development Standards
+
+The UseCase layer orchestrates business logic, defines dependency interfaces, and coordinates between Domain and Adapter layers.
+
+## Manager Struct
+
+```go
+// CertificateManager handles certificate operations.
+type CertificateManager struct {
+    klbGateway      KlbGateway
+    certRepo        CertificateRepository
+    workOrderRepo   WorkOrderRepository
+}
+
+// NewCertificateManager creates a new CertificateManager.
+func NewCertificateManager(
+    klbGateway KlbGateway,
+    certRepo CertificateRepository,
+    workOrderRepo WorkOrderRepository,
+) *CertificateManager {
+    return &CertificateManager{
+        klbGateway:    klbGateway,
+        certRepo:      certRepo,
+        workOrderRepo: workOrderRepo,
+    }
+}
+```
+
+**Key rules**:
+- Naming: `{Domain}Manager`
+- Fields: dependency interfaces (Gateway/Repository)
+- Constructor: `New{Domain}Manager`, takes all dependencies
+
+## Interface Definitions (interfaces.go)
+
+```go
+// CertificateRepository defines the certificate persistence port.
+type CertificateRepository interface {
+    FindByID(ctx context.Context, id string) (*domain.Certificate, error)
+    Save(ctx context.Context, cert *domain.Certificate) error
+    BatchUpsert(ctx context.Context, certs []*domain.Certificate) error
+    List(ctx context.Context, opts *dto.ListOptions) ([]*domain.Certificate, error)
+}
+
+// KlbGateway defines the KLB service gateway port.
+type KlbGateway interface {
+    ListCertificate(ctx context.Context) ([]*domain.Certificate, error)
+    GetCertDeployment(ctx context.Context, certId string) ([]*domain.CertDeployment, error)
+}
+```
+
+**Interface naming**:
+- Repository: `{Entity}Repository`
+- Gateway: `{Service}Gateway`
+
+## Method Signatures
+
+```go
+// ListCertificates retrieves a paginated list of certificates.
+func (m *CertificateManager) ListCertificates(
+    ctx context.Context,
+    req *dto.ListCertificatesRequest,
+) (*dto.ListCertificatesResponse, error) {
+    // 1. Validate parameters
+    if req.Limit <= 0 {
+        return nil, utils.BadRequestError("limit must be positive")
+    }
+
+    // 2. Call repository
+    certs, err := m.certRepo.List(ctx, req.ToListOptions())
+    if err != nil {
+        return nil, err
+    }
+
+    // 3. Build response
+    return &dto.ListCertificatesResponse{
+        Certificates: certs,
+        Total:        len(certs),
+    }, nil
+}
+```
+
+**Key rules**:
+- First parameter: `ctx context.Context`
+- Request parameter: use `dto.XxxRequest`
+- Return value: `(*dto.XxxResponse, error)` or `error`
+
+## DTO Definitions (dto/ directory)
+
+```go
+// ListCertificatesRequest is the request for listing certificates.
+type ListCertificatesRequest struct {
+    SreProjectID string
+    Limit        int
+    PageIndex    int
+    Status       string
+}
+
+// ListCertificatesResponse is the response for listing certificates.
+type ListCertificatesResponse struct {
+    Certificates []*domain.Certificate
+    Total        int
+}
+```
+
+## Error Handling
+
+```go
+func (m *UserManager) FindByID(ctx context.Context, id uint) (*domain.User, error) {
+    user, err := m.userRepo.FindByID(ctx, id)
+    if err != nil {
+        if errors.Is(err, ErrUserNotFound) {
+            return nil, utils.NotFoundError("user not found")
+        }
+        log.Error("failed to find user", "user_id", id, "error", err)
+        return nil, utils.WrapError(err, "failed to find user")
+    }
+    return &user, nil
+}
+```
+
+**Error handling pattern**:
+1. Check error
+2. Convert special errors to business errors (NotFound, BadRequest)
+3. Log error with context
+4. Return error
+
+## Mock Generation
+
+Add at the top of `interfaces.go`:
+
+```go
+//go:generate mockgen -source=interfaces.go -destination=mock/interfaces.go -package=mock
+```
+
+Run `make mock` to generate mock files.

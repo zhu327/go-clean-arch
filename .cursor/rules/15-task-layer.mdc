@@ -1,0 +1,65 @@
+---
+description: Background task development standards - task definitions
+globs: "**/delivery/task/*.go"
+alwaysApply: false
+---
+
+# Background Task Development Standards
+
+Background tasks live in `{domain}/adapter/delivery/task/` and are used for periodic data sync and similar operations.
+
+## Task Struct
+
+```go
+// UserCleanupTask handles user data cleanup.
+type UserCleanupTask struct {
+    userManager *usecase.UserManager
+}
+
+// NewUserCleanupTask creates a new UserCleanupTask.
+func NewUserCleanupTask(manager *usecase.UserManager) *UserCleanupTask {
+    return &UserCleanupTask{userManager: manager}
+}
+```
+
+**Naming conventions**:
+- Struct: `{Domain}Task` or `{Domain}{Action}Task`
+- Constructor: `New{Domain}Task`
+
+## Task Implementation
+
+```go
+// Run executes the task.
+func (t *UserCleanupTask) Run(ctx context.Context) error {
+    log.Info("starting user cleanup task")
+
+    count, err := t.userManager.CleanupInactiveUsers(ctx)
+    if err != nil {
+        log.Error("failed to cleanup users", "error", err)
+        return err
+    }
+
+    log.Info("user cleanup completed", "cleaned_count", count)
+    return nil
+}
+```
+
+## Logging Pattern
+
+```go
+func (t *Task) Run(ctx context.Context) error {
+    log.Info("starting task")           // Start log
+    // ...
+    log.Error("task failed", "error", err)  // Error log
+    // ...
+    log.Info("task completed", "count", n)  // Completion log
+    return nil
+}
+```
+
+## Key Rules
+
+- Tasks depend on UseCase Manager; never call Repository directly
+- Use `pkg/log` to log task start, completion, and errors
+- First parameter must be `ctx context.Context`
+- Register Task constructors in Wire
