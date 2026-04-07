@@ -28,6 +28,6 @@ func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	tokenService := auth.NewTokenService(cfg)
 	userManager := userUsecase.NewUserManager(userRepository, tokenService)
 	userHandlerObj := userHandler.NewUserHandler(userManager)
-	server := delivery.NewServer(userHandlerObj)
+	server := delivery.NewServer(cfg, userHandlerObj, tokenService)
 	return server, nil
 }

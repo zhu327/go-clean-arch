@@ -4,6 +4,8 @@ import (
 	"go-clean-arch/internal/shared/adapter/delivery/http/middleware"
 	"go-clean-arch/internal/shared/adapter/delivery/http/router"
 	userHandler "go-clean-arch/internal/user/adapter/delivery/http/handler"
+	"go-clean-arch/pkg/auth"
+	"go-clean-arch/pkg/config"
 	"go-clean-arch/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -12,10 +14,11 @@ import (
 // Server is the HTTP server.
 type Server struct {
 	engine *gin.Engine
+	port   string
 }
 
 // NewServer creates a new HTTP server, assembling middleware and routes.
-func NewServer(userHandler *userHandler.UserHandler) *Server {
+func NewServer(cfg config.Config, userHandler *userHandler.UserHandler, tokenService auth.TokenService) *Server {
 	engine := gin.New()
 
 	engine.Use(gin.Recovery())
@@ -23,14 +26,16 @@ func NewServer(userHandler *userHandler.UserHandler) *Server {
 	engine.Use(gin.Logger())
 
 	router.SetupRouter(engine, router.RouterParams{
-		UserHandler: userHandler,
+		UserHandler:  userHandler,
+		TokenService: tokenService,
 	})
 
-	return &Server{engine: engine}
+	return &Server{engine: engine, port: cfg.Port}
 }
 
 // Start starts the HTTP server.
 func (s *Server) Start() error {
-	log.Info("starting HTTP server on :8000")
-	return s.engine.Run(":8000")
+	addr := ":" + s.port
+	log.Info("starting HTTP server", "addr", addr)
+	return s.engine.Run(addr)
 }

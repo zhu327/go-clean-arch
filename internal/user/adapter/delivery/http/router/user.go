@@ -7,7 +7,8 @@ import (
 )
 
 // RegisterUserRoutes registers all user-related routes.
-func RegisterUserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler) {
+// The authMiddleware is applied to routes that require authentication.
+func RegisterUserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler, authMiddleware gin.HandlerFunc) {
 	auth := api.Group("/auth")
 	{
 		auth.POST("/login", userHandler.Login)
@@ -15,6 +16,7 @@ func RegisterUserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler) 
 	}
 
 	user := api.Group("/user")
+	user.Use(authMiddleware)
 	{
 		user.GET("/me", userHandler.Me)
 	}

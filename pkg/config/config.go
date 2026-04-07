@@ -5,42 +5,46 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds all application configuration.
 type Config struct {
 	DBHost     string `mapstructure:"DB_HOST"`
 	DBName     string `mapstructure:"DB_NAME"`
 	DBUser     string `mapstructure:"DB_USER"`
 	DBPassword string `mapstructure:"DB_PASSWORD"`
 	DBPort     string `mapstructure:"DB_PORT"`
-	SECRET_KEY string `mapstructure:"SECRET_KEY"`
+	SecretKey  string `mapstructure:"SECRET_KEY"`
+	Port       string `mapstructure:"PORT"`
 }
 
-// LoadConfig loads the configuration from the .env file
 var envs = []string{
 	"DB_HOST", "DB_NAME", "DB_USER", "DB_PORT", "DB_PASSWORD",
-	"SECRET_KEY",
+	"SECRET_KEY", "PORT",
 }
 
-func LoadConfig() (config Config, err error) {
-	// read .env file
+// LoadConfig loads configuration from the .env file or environment variables.
+func LoadConfig() (Config, error) {
 	viper.AddConfigPath("./")
 	viper.SetConfigFile(".env")
-	err = viper.ReadInConfig()
-	if err != nil {
-		// binding
+
+	viper.SetDefault("PORT", "8000")
+
+	var cfg Config
+
+	if err := viper.ReadInConfig(); err != nil {
 		for _, env := range envs {
 			if err := viper.BindEnv(env); err != nil {
-				return config, err
+				return cfg, err
 			}
 		}
 	}
 
-	if err := viper.Unmarshal(&config); err != nil {
-		return config, err
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return cfg, err
 	}
 
-	if err := validator.New().Struct(config); err != nil {
-		return config, err
+	if err := validator.New().Struct(cfg); err != nil {
+		return cfg, err
 	}
 
-	return config, nil
+	return cfg, nil
 }

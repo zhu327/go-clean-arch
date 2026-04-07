@@ -33,6 +33,12 @@ func Debug(msg string, args ...any) {
 	logger.Debug(msg, args...)
 }
 
+// Fatal logs a message at ERROR level and exits with code 1.
+func Fatal(msg string, args ...any) {
+	logger.Error(msg, args...)
+	os.Exit(1)
+}
+
 // With returns a Logger with preset fields.
 func With(args ...any) *slog.Logger {
 	return logger.With(args...)

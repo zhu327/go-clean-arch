@@ -2,8 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
+	"go-clean-arch/internal/shared/adapter/delivery/http/middleware"
 	"go-clean-arch/internal/user/adapter/delivery/http/dto"
 	"go-clean-arch/internal/user/usecase"
 	ucdto "go-clean-arch/internal/user/usecase/dto"
@@ -94,22 +94,22 @@ func (h *UserHandler) Login(c *gin.Context) {
 // Me godoc
 //
 //	@Summary		Get User Profile
-//	@Description	API for user to get their own profile
+//	@Description	API for authenticated user to get their own profile
 //	@Id				UserMe
 //	@Tags			User
 //	@Security		Bearer
 //	@Router			/api/user/me [get]
 //	@Success		200		{object}	dto.UserResponse
-//	@Failure		400		{object}	utils.AppError
+//	@Failure		401		{object}	utils.AppError
 //	@Failure		404		{object}	utils.AppError
 func (h *UserHandler) Me(c *gin.Context) {
-	userID, err := strconv.Atoi(c.Query("id"))
-	if err != nil {
-		c.Error(utils.BadRequestError("invalid user id"))
+	userID, exists := c.Get(middleware.UserIDKey)
+	if !exists {
+		c.Error(utils.UnauthorizedError("authentication required"))
 		return
 	}
 
-	user, err := h.userManager.FindByID(c.Request.Context(), uint(userID))
+	user, err := h.userManager.FindByID(c.Request.Context(), userID.(uint))
 	if err != nil {
 		c.Error(err)
 		return

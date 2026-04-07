@@ -9,18 +9,15 @@ import (
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Error("failed to load config", "error", err)
-		panic(err)
+		log.Fatal("failed to load config", "error", err)
 	}
 
 	server, err := di.InitializeAPI(cfg)
 	if err != nil {
-		log.Error("failed to initialize server", "error", err)
-		panic(err)
+		log.Fatal("failed to initialize server", "error", err)
 	}
 
 	if err := server.Start(); err != nil {
-		log.Error("failed to start server", "error", err)
-		panic(err)
+		log.Fatal("failed to start server", "error", err)
 	}
 }
