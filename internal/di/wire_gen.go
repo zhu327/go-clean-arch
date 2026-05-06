@@ -7,12 +7,14 @@
 package di
 
 import (
-	delivery "go-clean-arch/internal/shared/adapter/delivery"
-	userHandler "go-clean-arch/internal/user/adapter/delivery/http/handler"
-	userRepo "go-clean-arch/internal/user/adapter/repository"
-	userUsecase "go-clean-arch/internal/user/usecase"
+	"go-clean-arch/internal/shared/adapter/delivery"
+	"go-clean-arch/internal/user/adapter/delivery/http/handler"
+	"go-clean-arch/internal/user/adapter/delivery/http/router"
+	"go-clean-arch/internal/user/adapter/repository"
+	"go-clean-arch/internal/user/usecase"
 	"go-clean-arch/pkg/auth"
 	"go-clean-arch/pkg/config"
+	"go-clean-arch/pkg/crypto"
 	"go-clean-arch/pkg/db"
 )
 
@@ -24,10 +26,14 @@ func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	userRepository := userRepo.NewUserRepository(gormDB)
+	userRepository := repository.NewUserRepository(gormDB)
 	tokenService := auth.NewTokenService(cfg)
-	userManager := userUsecase.NewUserManager(userRepository, tokenService)
-	userHandlerObj := userHandler.NewUserHandler(userManager)
-	server := delivery.NewServer(cfg, userHandlerObj, tokenService)
+	bcryptHasher := crypto.NewBcryptHasher()
+	tokenTTLs := provideTokenTTLs(cfg)
+	userManager := usecase.NewUserManager(userRepository, tokenService, bcryptHasher, tokenTTLs)
+	userHandler := handler.NewUserHandler(userManager)
+	userRegistrar := router.NewUserRegistrar(userHandler)
+	registrars := provideRegistrars(userRegistrar)
+	server := delivery.NewServer(cfg, registrars, tokenService)
 	return server, nil
 }

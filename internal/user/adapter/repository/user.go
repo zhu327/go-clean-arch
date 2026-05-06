@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"go-clean-arch/internal/user/domain"
-	"go-clean-arch/internal/user/usecase"
 
 	"gorm.io/gorm"
 )
@@ -43,7 +42,7 @@ func (r *UserRepository) findOne(ctx context.Context, where string, arg any) (do
 	var userModel UserModel
 	if err := r.db.WithContext(ctx).Where(where, arg).First(&userModel).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.User{}, usecase.ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, err
 	}

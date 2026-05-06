@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"go-clean-arch/internal/user/domain"
+	"go-clean-arch/internal/user/usecase"
 	"go-clean-arch/pkg/log"
 	"go-clean-arch/pkg/utils"
 
@@ -17,6 +19,24 @@ type errorResponse struct {
 
 func jsonError(c *gin.Context, code int, message string) {
 	c.JSON(code, errorResponse{Code: code, Message: message})
+}
+
+func mapDomainError(err error) (int, string, bool) {
+	switch {
+	case errors.Is(err, domain.ErrUserAlreadyExists):
+		return http.StatusConflict, domain.ErrUserAlreadyExists.Error(), true
+	case errors.Is(err, domain.ErrUserNotFound):
+		return http.StatusNotFound, domain.ErrUserNotFound.Error(), true
+	case errors.Is(err, usecase.ErrInvalidCredentials):
+		return http.StatusUnauthorized, usecase.ErrInvalidCredentials.Error(), true
+	case errors.Is(err, domain.ErrInvalidEmail),
+		errors.Is(err, domain.ErrUsernameTooShort),
+		errors.Is(err, domain.ErrUsernameTooLong),
+		errors.Is(err, domain.ErrEmptyPassword):
+		return http.StatusBadRequest, err.Error(), true
+	default:
+		return 0, "", false
+	}
 }
 
 // ErrorHandler is a middleware that converts errors from c.Error() into JSON responses.
@@ -40,6 +60,11 @@ func ErrorHandler() gin.HandlerFunc {
 				)
 			}
 			jsonError(c, appErr.Code, appErr.Message)
+			return
+		}
+
+		if code, msg, ok := mapDomainError(err); ok {
+			jsonError(c, code, msg)
 			return
 		}
 

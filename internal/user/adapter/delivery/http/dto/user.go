@@ -2,15 +2,15 @@ package dto
 
 // SignUpRequest is the registration request body.
 type SignUpRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=15"`
+	Username string `json:"username" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=5,max=25"`
+	Password string `json:"password" binding:"required"`
 }
 
 // LoginRequest is the login request body.
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=5,max=25"`
+	Password string `json:"password" binding:"required"`
 }
 
 // UserResponse is the user response (excludes sensitive data).

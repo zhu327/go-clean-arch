@@ -7,13 +7,15 @@ import (
 	"go-clean-arch/internal/user/domain"
 )
 
-//go:generate mockgen -source=interfaces.go -destination=mock/interfaces.go -package=mock
+//go:generate mockgen -source=interfaces.go -destination=mock/interfaces.go -package=mock PasswordHasher,UserRepository
 
-var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-)
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
+// PasswordHasher hashes and verifies passwords.
+type PasswordHasher interface {
+	Hash(password string) (string, error)
+	Verify(password, hash string) error
+}
 
 // UserRepository defines the user data persistence port.
 type UserRepository interface {

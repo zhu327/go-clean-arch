@@ -3,26 +3,40 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go-clean-arch/internal/user/domain"
 	"go-clean-arch/internal/user/usecase/dto"
 	"go-clean-arch/pkg/auth"
-	"go-clean-arch/pkg/crypto"
-	"go-clean-arch/pkg/utils"
 )
+
+// TokenTTLs holds the TTL configuration for tokens.
+type TokenTTLs struct {
+	Access  time.Duration
+	Refresh time.Duration
+}
 
 // UserManager handles user registration, login, and queries.
 type UserManager struct {
-	userRepo     UserRepository
-	tokenService auth.TokenService
+	userRepo       UserRepository
+	tokenService   auth.TokenService
+	passwordHasher PasswordHasher
+	ttls           TokenTTLs
 }
 
 // NewUserManager creates a new UserManager instance.
-func NewUserManager(userRepo UserRepository, tokenService auth.TokenService) *UserManager {
+func NewUserManager(
+	userRepo UserRepository,
+	tokenService auth.TokenService,
+	passwordHasher PasswordHasher,
+	ttls TokenTTLs,
+) *UserManager {
 	return &UserManager{
-		userRepo:     userRepo,
-		tokenService: tokenService,
+		userRepo:       userRepo,
+		tokenService:   tokenService,
+		passwordHasher: passwordHasher,
+		ttls:           ttls,
 	}
 }
 
@@ -30,25 +44,25 @@ func NewUserManager(userRepo UserRepository, tokenService auth.TokenService) *Us
 func (m *UserManager) SignUp(ctx context.Context, params dto.SignUpParams) (*domain.User, error) {
 	_, err := m.userRepo.FindByEmail(ctx, params.Email)
 	if err == nil {
-		return nil, utils.ConflictError(ErrUserAlreadyExists.Error())
+		return nil, domain.ErrUserAlreadyExists
 	}
-	if !errors.Is(err, ErrUserNotFound) {
-		return nil, utils.WrapError(err, "failed to check existing user")
+	if !errors.Is(err, domain.ErrUserNotFound) {
+		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
 
-	hashedPassword, err := crypto.HashPassword(params.Password)
+	hashedPassword, err := m.passwordHasher.Hash(params.Password)
 	if err != nil {
-		return nil, utils.InternalError("failed to hash password")
+		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	user, err := domain.NewUser(params.Username, params.Email, hashedPassword)
 	if err != nil {
-		return nil, utils.BadRequestError(err.Error())
+		return nil, err
 	}
 
 	created, err := m.userRepo.Create(ctx, *user)
 	if err != nil {
-		return nil, utils.WrapError(err, "failed to create user")
+		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 	return &created, nil
 }
@@ -57,14 +71,14 @@ func (m *UserManager) SignUp(ctx context.Context, params dto.SignUpParams) (*dom
 func (m *UserManager) Login(ctx context.Context, params dto.LoginParams) (*dto.AuthTokens, error) {
 	user, err := m.userRepo.FindByEmail(ctx, params.Email)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			return nil, utils.UnauthorizedError(ErrInvalidCredentials.Error())
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil, ErrInvalidCredentials
 		}
-		return nil, utils.WrapError(err, "failed to query user")
+		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
 
-	if err := crypto.ValidatePassword(params.Password, user.Password); err != nil {
-		return nil, utils.UnauthorizedError(ErrInvalidCredentials.Error())
+	if err := m.passwordHasher.Verify(params.Password, user.Password); err != nil {
+		return nil, ErrInvalidCredentials
 	}
 
 	return m.issueTokens(user.ID)
@@ -74,16 +88,16 @@ func (m *UserManager) Login(ctx context.Context, params dto.LoginParams) (*dto.A
 func (m *UserManager) issueTokens(userID uint) (*dto.AuthTokens, error) {
 	req := auth.GenerateTokenRequest{UserID: userID}
 
-	req.ExpireAt = time.Now().Add(20 * time.Minute)
+	req.ExpireAt = time.Now().Add(m.ttls.Access)
 	access, err := m.tokenService.GenerateToken(req)
 	if err != nil {
-		return nil, utils.InternalError("failed to generate access token")
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	req.ExpireAt = time.Now().Add(7 * 24 * time.Hour)
+	req.ExpireAt = time.Now().Add(m.ttls.Refresh)
 	refresh, err := m.tokenService.GenerateToken(req)
 	if err != nil {
-		return nil, utils.InternalError("failed to generate refresh token")
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
 	return &dto.AuthTokens{
@@ -111,8 +125,8 @@ func (m *UserManager) FindByEmail(ctx context.Context, email string) (*domain.Us
 }
 
 func mapFindUserErr(err error) error {
-	if errors.Is(err, ErrUserNotFound) {
-		return utils.NotFoundError(ErrUserNotFound.Error())
+	if errors.Is(err, domain.ErrUserNotFound) {
+		return domain.ErrUserNotFound
 	}
-	return utils.WrapError(err, "failed to find user")
+	return fmt.Errorf("failed to find user: %w", err)
 }

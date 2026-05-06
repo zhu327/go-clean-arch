@@ -7,10 +7,12 @@ import (
 )
 
 var (
-	ErrInvalidEmail     = errors.New("invalid email format")
-	ErrUsernameTooShort = errors.New("username is too short")
-	ErrUsernameTooLong  = errors.New("username is too long")
-	ErrEmptyPassword    = errors.New("password cannot be empty")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrInvalidEmail      = errors.New("invalid email format")
+	ErrUsernameTooShort  = errors.New("username is too short")
+	ErrUsernameTooLong   = errors.New("username is too long")
+	ErrEmptyPassword     = errors.New("password cannot be empty")
 )
 
 var emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)

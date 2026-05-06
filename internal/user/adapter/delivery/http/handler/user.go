@@ -5,7 +5,6 @@ import (
 
 	"go-clean-arch/internal/shared/adapter/delivery/http/middleware"
 	"go-clean-arch/internal/user/adapter/delivery/http/dto"
-	"go-clean-arch/internal/user/usecase"
 	ucdto "go-clean-arch/internal/user/usecase/dto"
 	"go-clean-arch/pkg/utils"
 
@@ -14,12 +13,12 @@ import (
 
 // UserHandler is the HTTP handler for user operations.
 type UserHandler struct {
-	userManager *usecase.UserManager
+	userUseCase UserUseCase
 }
 
 // NewUserHandler creates a new UserHandler instance.
-func NewUserHandler(userManager *usecase.UserManager) *UserHandler {
-	return &UserHandler{userManager: userManager}
+func NewUserHandler(userUseCase UserUseCase) *UserHandler {
+	return &UserHandler{userUseCase: userUseCase}
 }
 
 // SignUp godoc
@@ -37,17 +36,17 @@ func NewUserHandler(userManager *usecase.UserManager) *UserHandler {
 func (h *UserHandler) SignUp(c *gin.Context) {
 	var req dto.SignUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(utils.BadRequestError(err.Error()))
+		_ = c.Error(utils.BadRequestError(err.Error()))
 		return
 	}
 
-	user, err := h.userManager.SignUp(c.Request.Context(), ucdto.SignUpParams{
+	user, err := h.userUseCase.SignUp(c.Request.Context(), ucdto.SignUpParams{
 		Username: req.Username,
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 
@@ -72,16 +71,16 @@ func (h *UserHandler) SignUp(c *gin.Context) {
 func (h *UserHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(utils.BadRequestError(err.Error()))
+		_ = c.Error(utils.BadRequestError(err.Error()))
 		return
 	}
 
-	tokens, err := h.userManager.Login(c.Request.Context(), ucdto.LoginParams{
+	tokens, err := h.userUseCase.Login(c.Request.Context(), ucdto.LoginParams{
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 
@@ -105,13 +104,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 func (h *UserHandler) Me(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
-		c.Error(utils.UnauthorizedError("authentication required"))
+		_ = c.Error(utils.UnauthorizedError("authentication required"))
 		return
 	}
 
-	user, err := h.userManager.FindByID(c.Request.Context(), userID.(uint))
+	user, err := h.userUseCase.FindByID(c.Request.Context(), userID.(uint))
 	if err != nil {
-		c.Error(err)
+		_ = c.Error(err)
 		return
 	}
 

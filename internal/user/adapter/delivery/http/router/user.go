@@ -6,8 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterUserRoutes registers all user-related routes.
-// The authMiddleware is applied to routes that require authentication.
+type UserRegistrar struct {
+	handler *handler.UserHandler
+}
+
+func NewUserRegistrar(h *handler.UserHandler) *UserRegistrar {
+	return &UserRegistrar{handler: h}
+}
+
+func (r *UserRegistrar) RegisterRoutes(api *gin.RouterGroup, authMW gin.HandlerFunc) {
+	RegisterUserRoutes(api, r.handler, authMW)
+}
+
 func RegisterUserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler, authMiddleware gin.HandlerFunc) {
 	auth := api.Group("/auth")
 	{
