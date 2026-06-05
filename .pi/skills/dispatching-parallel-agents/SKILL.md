@@ -1,6 +1,6 @@
 ---
 name: dispatching-parallel-agents
-description: Dispatch one agent per independent problem for concurrent execution. Use when facing 2+ independent bugs, failures, or investigations across different domains that share no state or files.
+description: Use for 2+ independent ad-hoc bugs, investigations, or fixes that can run concurrently without shared files or sequential dependencies. Not for executing written plans; use subagent-driven-development for planned work.
 disable-model-invocation: true
 ---
 
@@ -12,28 +12,21 @@ When you have multiple **independent problems** to solve (different bugs, differ
 
 **Core principle:** One agent per independent problem domain. Concurrent execution. No shared state.
 
+**Tool used:** `subagent` — use `tasks` array to dispatch multiple agents simultaneously.
+
 **This skill is for: solving N independent problems in parallel.**
-**NOT for: executing a sequential implementation plan** — use `subagent-driven-development` for that.
+**NOT for: executing a sequential implementation plan** — use /skill:subagent-driven-development for that.
 
 ## When to Use
 
-```dot
-digraph when_to_use {
-    "Multiple tasks/problems?" [shape=diamond];
-    "Following an implementation plan?" [shape=diamond];
-    "Are tasks independent (no shared files)?" [shape=diamond];
-    "subagent-driven-development" [shape=box, style=filled, fillcolor="#ccccff"];
-    "Single agent handles all" [shape=box];
-    "Parallel dispatch (this skill)" [shape=box, style=filled, fillcolor="#ccffcc"];
-    "Sequential agents" [shape=box];
-
-    "Multiple tasks/problems?" -> "Following an implementation plan?" [label="yes"];
-    "Multiple tasks/problems?" -> "Single agent handles all" [label="no - single task"];
-    "Following an implementation plan?" -> "subagent-driven-development" [label="yes - plan with ordered tasks"];
-    "Following an implementation plan?" -> "Are tasks independent (no shared files)?" [label="no - ad-hoc problems"];
-    "Are tasks independent (no shared files)?" -> "Parallel dispatch (this skill)" [label="yes"];
-    "Are tasks independent (no shared files)?" -> "Sequential agents" [label="no - shared state"];
-}
+```
+Multiple tasks/problems?
+  ├─ no → Single agent handles all
+  └─ yes → Following an implementation plan?
+            ├─ yes → Use /skill:subagent-driven-development
+            └─ no → Are tasks independent (no shared files)?
+                     ├─ yes → Parallel dispatch (this skill)
+                     └─ no → Sequential agents
 ```
 
 **Use when:**
@@ -43,7 +36,7 @@ digraph when_to_use {
 - No implementation plan — just problems to fix
 
 **Don't use when:**
-- Following an implementation plan (use `subagent-driven-development`)
+- Following an implementation plan (use /skill:subagent-driven-development)
 - Failures are related (fix one might fix others)
 - Need to understand full system state first
 - Agents would interfere (editing same files)
@@ -69,20 +62,25 @@ Each agent gets:
 
 ### 3. Dispatch in Parallel
 
+Use the `subagent` tool with `tasks` array:
+
+```json
+{
+  "tasks": [
+    { "task": "Fix certificate manager test failures\n\n[details]" },
+    { "task": "Fix subdomain repository test failures\n\n[details]" },
+    { "task": "Fix workorder usecase test failures\n\n[details]" }
+  ]
+}
 ```
-// 在 Cursor 中使用 Task 工具并行调度
-Task("Fix certificate manager test failures")
-Task("Fix subdomain repository test failures")
-Task("Fix workorder usecase test failures")
-// All three run concurrently
-```
+All three run concurrently. Add an `agent` field only when a suitable implementation agent exists.
 
 ### 4. Review and Integrate
 
 When agents return:
-- Read each summary
+- Read each summary from the `subagent` output
 - Verify fixes don't conflict
-- Run `make test && make lint` to verify
+- Run `bash("make test && make lint")` to verify
 - Integrate all changes
 
 ## Agent Prompt Structure
@@ -131,14 +129,14 @@ Return: Summary of what you found and what you fixed.
 
 | | Parallel Agents (this skill) | Subagent-Driven Development |
 |---|---|---|
-| **Input** | Ad-hoc problems/failures | Implementation plan from `writing-plans` |
-| **Execution** | All agents run concurrently | One task at a time, sequentially |
+| **Input** | Ad-hoc problems/failures | Implementation plan from /skill:writing-plans |
+| **Execution** | All agents run concurrently | Dependency-aware waves; parallel within safe waves, sequential across dependency layers |
 | **Review** | Post-integration only | Two-stage review after each task |
 | **When** | Multiple independent bugs/issues | Building features from a plan |
 | **Agent count** | N agents simultaneously | 1 implementer + 2 reviewers per task |
 | **Coordination** | None (independent) | Controller orchestrates sequence |
 
-**Rule of thumb:** "Fix N broken things" → this skill. "Build something from a plan" → `subagent-driven-development`.
+**Rule of thumb:** "Fix N broken things" → this skill. "Build something from a plan" → /skill:subagent-driven-development.
 
 ## When NOT to Use
 
@@ -146,55 +144,23 @@ Return: Summary of what you found and what you fixed.
 **Need full context:** Understanding requires seeing entire system
 **Exploratory debugging:** You don't know what's broken yet
 **Shared state:** Agents would interfere (editing same files, using same resources)
-**Implementation plan:** Use `subagent-driven-development` for planned, sequential work
+**Implementation plan:** Use /skill:subagent-driven-development for planned, sequential work
 
 ## Real Example from Session
 
 **Scenario:** 6 test failures across 3 domains after major refactoring
 
-**Failures:**
-- internal/certificate/usecase/manager_test.go: 3 failures (mock setup issues)
-- internal/subdomain/adapter/repository/subdomain_test.go: 2 failures (GORM query issues)
-- internal/workorder/usecase/manager_test.go: 1 failure (gateway mock incomplete)
-
-**Decision:** Independent domains - Certificate 独立于 SubDomain 独立于 WorkOrder
-
 **Dispatch:**
+```json
+{
+  "tasks": [
+    { "task": "Fix internal/certificate/usecase/manager_test.go" },
+    { "task": "Fix internal/subdomain/adapter/repository/subdomain_test.go" },
+    { "task": "Fix internal/workorder/usecase/manager_test.go" }
+  ]
+}
 ```
-Agent 1 → Fix internal/certificate/usecase/manager_test.go
-Agent 2 → Fix internal/subdomain/adapter/repository/subdomain_test.go
-Agent 3 → Fix internal/workorder/usecase/manager_test.go
-```
-
-**Results:**
-- Agent 1: 修正 mock.EXPECT 的 DoAndReturn 设置
-- Agent 2: 修复 GORM Preload 导致的 N+1 查询问题
-- Agent 3: 补全 Gateway mock 返回的结构体字段
 
 **Integration:** All fixes independent, no conflicts, `make test` green
 
 **Time saved:** 3 problems solved in parallel vs sequentially
-
-## Key Benefits
-
-1. **Parallelization** - Multiple investigations happen simultaneously
-2. **Focus** - Each agent has narrow scope, less context to track
-3. **Independence** - Agents don't interfere with each other
-4. **Speed** - 3 problems solved in time of 1
-
-## Verification
-
-After agents return:
-1. **Review each summary** - Understand what changed
-2. **Check for conflicts** - Did agents edit same code?
-3. **Run full suite** - `make test && make lint` verify all fixes work together
-4. **Spot check** - Agents can make systematic errors
-
-## Real-World Impact
-
-From debugging session (2025-10-03):
-- 6 failures across 3 files
-- 3 agents dispatched in parallel
-- All investigations completed concurrently
-- All fixes integrated successfully
-- Zero conflicts between agent changes

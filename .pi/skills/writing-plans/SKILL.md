@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Write comprehensive implementation plans with vertical slices, dependency graphs, TDD steps, and exact file paths. Use when you have a spec or requirements for a multi-step task, before touching code. Produces plans executable by subagent-driven-development or executing-plans.
+description: Use after requirements or design are understood and before coding a multi-step change. Creates concrete implementation plans with vertical slices, dependency graphs, file lists, TDD steps, and validation commands.
 ---
 
 # Writing Plans
@@ -13,7 +13,23 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md` (use the `write` tool)
+
+## When invoked by /go
+
+When this skill is invoked as part of `/go`, the approved brainstorming design is locked input. Do not silently change approved requirements or reopen design choices.
+
+Go mode overrides the normal planning prompts:
+
+- Do not ask the plan-breakdown quiz in Step 3.
+- Do not ask the execution-choice question in Execution Handoff.
+- Write the full implementation plan directly from the approved design.
+- Include a task dependency graph suitable for `/skill:subagent-driven-development`.
+- Mark every task as AFK or HITL.
+- If any HITL task needs a human decision not already resolved by the approved design, stop and report the blocker to the `go` coordinator instead of guessing.
+- Include `**GO_EXECUTION_READY:** true` in the plan header only when the saved plan has no unresolved HITL decisions and can be executed autonomously.
+
+After saving the plan in go mode, return the saved plan path to the `go` coordinator so it can continue automatically.
 
 ## Process
 
@@ -21,7 +37,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 Before writing the plan, explore the relevant code directories and existing implementation patterns:
 
-- Identify the domain modules involved and read their current structure
+- Identify the domain modules involved and read their current structure (use `read`, `bash` with `fd`/`rg`)
 - Note naming conventions, existing interfaces, and patterns in use
 - Check for ADRs or design docs that constrain the approach
 - Use the project's domain glossary vocabulary in task titles and descriptions
@@ -46,18 +62,20 @@ Present the proposed breakdown as a numbered list before writing the full plan. 
 - **Blocked by**: which other slices (if any) must complete first
 - **Layers touched**: Domain / UseCase / Adapter / etc.
 
-Ask the user:
+Use the `question` tool to ask the user:
 
 - Does the granularity feel right? (too coarse / too fine)
 - Are the dependency relationships correct?
 - Should any slices be merged or split further?
 - Are the correct slices marked as HITL and AFK?
 
-**STOP HERE.** Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz. 在这里停止。在用户明确批准拆分并回答问题之前，不要编写完整的计划或进入第 4 步。
+Outside `/go`, **STOP HERE.** Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz. 在这里停止。在用户明确批准拆分并回答问题之前，不要编写完整的计划或进入第 4 步。
+
+In `/go`, skip this quiz only after there is an approved brainstorming design and no unresolved HITL decisions. If unresolved HITL decisions exist, stop and report the blocker to the `go` coordinator instead of proceeding.
 
 ### 4. Write the Full Plan
 
-Expand each approved slice into the full Task Structure (see below) and save the plan document.
+Expand each approved slice into the full Task Structure (see below) and save the plan document using the `write` tool.
 
 ## Task & Step Granularity
 
@@ -73,13 +91,15 @@ Because a Vertical Slice touches multiple layers, a single Task MUST contain mul
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For Cursor:** Execute this plan using `executing-plans` (separate session with checkpoints) or `subagent-driven-development` (current session with subagents).
+> **For Pi:** Execute this plan using /skill:executing-plans (separate session with checkpoints) or /skill:subagent-driven-development (current session with subagents).
 
 **Goal:** [One sentence describing what this builds]
 
 **Architecture:** [2-3 sentences about approach]
 
 **Tech Stack:** [Key technologies/libraries]
+
+**GO_EXECUTION_READY:** true/false (only required when invoked by `/go`)
 
 ## Task Dependency Graph
 
@@ -283,35 +303,38 @@ git add internal/{domain}/
 - Exact file paths always
 - Complete code in plan (not "add validation")
 - Exact commands with expected output
-- Reference relevant skills with @ syntax
+- Reference relevant skills with /skill: syntax
 - DRY, YAGNI, TDD
-- If the plan adds/modifies API endpoints, include E2E test tasks (use `e2e-testing` skill)
+- If the plan adds/modifies API endpoints, identify the E2E requirement and include E2E authoring in the relevant task or as a separate vertical slice (use `/skill:e2e-testing`)
 - Vertical slices, not horizontal layers — each task must be independently verifiable
 - Declare dependencies explicitly — enable parallel execution where possible
 
 ## Execution Handoff
 
-After saving the plan, use `AskQuestion` to offer execution choice:
+Outside `/go`, after saving the plan, use `question` to offer execution choice.
+
+In `/go`, do not ask for execution choice. Return the saved plan path to the `go` coordinator so it can continue with `/skill:subagent-driven-development`.
+
+Execution choice question:
 
 ```
-AskQuestion({
-  title: "执行方式选择",
+question({
   questions: [{
     id: "execution_approach",
     prompt: "Plan saved to docs/plans/<filename>.md. How would you like to execute?",
     options: [
-      { id: "subagent", label: "Subagent-Driven (this session) - Fresh subagent per task, fast iteration" },
-      { id: "parallel", label: "Parallel Session (separate) - Batch execution with checkpoints" }
+      { label: "Subagent-Driven (this session) - Fresh subagent per task, fast iteration", value: "subagent" },
+      { label: "Executing Plans (separate session) - Batch execution with checkpoints", value: "executing_plans" }
     ]
   }]
 })
 ```
 
 **If Subagent-Driven chosen:**
-- Read and follow `.cursor/skills/subagent-driven-development/SKILL.md`
+- **REQUIRED SUB-SKILL:** Use /skill:subagent-driven-development
 - Stay in this session
 - Fresh subagent per task + code review
 - Use dependency graph to parallelize independent AFK tasks
 
-**If Parallel Session chosen:**
-- New session reads and follows `.cursor/skills/executing-plans/SKILL.md`
+**If Executing Plans chosen:**
+- **REQUIRED SUB-SKILL:** New session uses /skill:executing-plans

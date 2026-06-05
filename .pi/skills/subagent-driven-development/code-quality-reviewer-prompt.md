@@ -6,13 +6,11 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Only dispatch after spec compliance review passes.**
 
-```
-Task tool (subagent_type: code-reviewer):
-  description: "Review code quality for Task N: [task name]"
-
-  WHAT_WAS_IMPLEMENTED: [from implementer's report]
-  PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-  DESCRIPTION: [task summary]
+```json
+{
+  "agent": "code-reviewer",
+  "task": "Use /skill:code-review-expert\n\nWHAT_WAS_IMPLEMENTED: [from implementer's report]\nPLAN_OR_REQUIREMENTS: Task N from [plan-file]\nDESCRIPTION: [task summary]"
+}
 ```
 
 **Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Assessment

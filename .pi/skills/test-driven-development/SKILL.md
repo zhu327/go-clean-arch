@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Enforce red-green-refactor TDD discipline for all implementation work. Use when implementing new features, fixing bugs, refactoring behavior, or when any production code needs to be written. Ensures no production code without a failing test first.
+description: "Use before implementation code for any feature, bugfix, refactor, or behavior change. Enforces red-green-refactor: write and verify a failing test before production changes."
 ---
 
 # Test-Driven Development (TDD)
@@ -18,31 +18,23 @@ Write code before the test? **Delete it. Start over.** No keeping as "reference"
 
 ## Red-Green-Refactor
 
-```dot
-digraph tdd_cycle {
-    rankdir=LR;
-    red [label="RED\nWrite failing test", shape=box, style=filled, fillcolor="#ffcccc"];
-    verify_red [label="Verify fails\ncorrectly", shape=diamond];
-    green [label="GREEN\nMinimal code", shape=box, style=filled, fillcolor="#ccffcc"];
-    verify_green [label="Verify passes\nAll green", shape=diamond];
-    refactor [label="REFACTOR\nClean up", shape=box, style=filled, fillcolor="#ccccff"];
-    next [label="Next", shape=ellipse];
-
-    red -> verify_red;
-    verify_red -> green [label="yes"];
-    verify_red -> red [label="wrong\nfailure"];
-    green -> verify_green;
-    verify_green -> refactor [label="yes"];
-    verify_green -> green [label="no"];
-    refactor -> verify_green [label="stay\ngreen"];
-    verify_green -> next;
-    next -> red;
-}
+```
+RED → Write failing test
+  ↓
+Verify RED → Watch it fail correctly
+  ↓
+GREEN → Write minimal code to pass
+  ↓
+Verify GREEN → Watch it pass, all green
+  ↓
+REFACTOR → Clean up, keep tests green
+  ↓
+Next behavior → back to RED
 ```
 
 ### RED — Write Failing Test
 
-One minimal test showing what should happen.
+One minimal test showing what should happen. Use `edit` to add the test or `write` for new test files.
 
 ```go
 func TestRetryOperation_RetriesThreeTimes(t *testing.T) {
@@ -67,7 +59,7 @@ func TestRetryOperation_RetriesThreeTimes(t *testing.T) {
 
 ### Verify RED — Watch It Fail
 
-**MANDATORY. Never skip.**
+**MANDATORY. Never skip.** Use `bash` to run:
 
 ```bash
 go test -v ./internal/{domain}/usecase/... -run TestRetryOperation
@@ -80,10 +72,9 @@ Confirm: fails (not errors), failure message is expected, fails because feature 
 
 ### GREEN — Minimal Code
 
-Write simplest code to pass the test. Nothing more.
+Write simplest code to pass the test using `edit` (preferred) or `write`. Nothing more.
 
 ```go
-// RetryOperation 重试操作，最多尝试3次
 func RetryOperation[T any](fn func() (T, error)) (T, error) {
     var zero T
     var lastErr error
@@ -102,7 +93,7 @@ Don't add features, refactor other code, or "improve" beyond the test.
 
 ### Verify GREEN — Watch It Pass
 
-**MANDATORY.**
+**MANDATORY.** Use `bash`:
 
 ```bash
 go test -v ./internal/{domain}/usecase/... -run TestRetryOperation
@@ -161,9 +152,9 @@ func SubmitForm(ctx context.Context, data *FormData) (*Result, error) {
 Before marking work complete:
 
 - [ ] Every new function/method has a test
-- [ ] Watched each test fail before implementing
+- [ ] Watched each test fail before implementing (via `bash`)
 - [ ] Each test failed for expected reason (feature missing, not typo)
-- [ ] Wrote minimal code to pass each test
+- [ ] Wrote minimal code to pass each test (via `edit`)
 - [ ] All tests pass
 - [ ] Output pristine (no errors, warnings)
 - [ ] Tests use real code (mocks only if unavoidable)

@@ -46,7 +46,6 @@ For finer-grained control, use individual skills:
 |-------|---------|---------|
 | `go` | End-to-end automated development | `/go` + requirement description |
 | `brainstorming` | Requirements exploration & design | **Must use** before creating features, components, or modifying behavior |
-| `using-superpowers` | Skill usage guide | Ensures correct skill invocation |
 
 ### Planning (creates implementation plans)
 
@@ -124,3 +123,17 @@ internal/
 ```
 
 Feature development order: Domain → UseCase → Repository → Handler → Router → Swagger → Tests → Wire DI
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs live as markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

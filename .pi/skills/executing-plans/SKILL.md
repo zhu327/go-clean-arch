@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Execute a written implementation plan in a separate session with batch processing and review checkpoints. Use when user provides a plan file to execute, or when writing-plans hands off to a new session.
+description: Use when executing a written implementation plan task-by-task with todo tracking, TDD, verification commands, and human review checkpoints between batches. Outside /go; /go uses subagent-driven-development instead.
 disable-model-invocation: true
 ---
 
@@ -17,19 +17,19 @@ Load plan, review critically, execute tasks in batches, report for review betwee
 ## The Process
 
 ### Step 1: Load and Review Plan
-1. Read plan file
+1. Read plan file (use `read` tool)
 2. Review critically - identify any questions or concerns about the plan
 3. If concerns: Raise them with your human partner before starting
-4. If no concerns: Create TodoWrite and proceed
+4. If no concerns: Create `todo` items and proceed
 
 ### Step 2: Execute Batch
 **Default: First 3 tasks**
 
 For each task:
-1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps), using `test-driven-development` discipline
-3. Run verifications as specified
-4. Mark as completed
+1. Mark as in_progress in `todo`
+2. Follow each step exactly (plan has bite-sized steps), using /skill:test-driven-development
+3. Run verifications as specified (use `bash` tool)
+4. Mark as completed in `todo`
 
 ### Step 3: Report
 When batch complete:
@@ -39,7 +39,7 @@ When batch complete:
 
 ### Step 4: Continue
 Based on feedback:
-- Apply changes if needed
+- Apply changes if needed (use `edit` tool)
 - Execute next batch
 - Repeat until complete
 
@@ -66,14 +66,16 @@ Based on feedback:
 - Follow TDD: no production code without a failing test first
 - Follow plan steps exactly
 - Don't skip verifications
-- Reference skills when plan says to
+- Reference skills when plan says to (use /skill: syntax)
 - Between batches: just report and wait
 - Stop when blocked, don't guess
 - Never start implementation on main/master branch without explicit user consent
 
 ## Integration
 
+`/go` does not use this skill; `/go` always routes execution through `/skill:subagent-driven-development`. Use this skill outside `/go` when you want checkpointed, human-reviewed batch execution.
+
 **Required workflow skills:**
-- `writing-plans` — Creates the plan this skill executes
-- `test-driven-development` — TDD discipline for all implementation
-- `e2e-testing` — E2E API tests for new/modified endpoints (run `make e2e` after implementation)
+- **/skill:writing-plans** - Creates the plan this skill executes
+- **/skill:test-driven-development** - TDD discipline for all implementation
+- **/skill:e2e-testing** - E2E API tests for new/modified endpoints (run `make e2e` after implementation)

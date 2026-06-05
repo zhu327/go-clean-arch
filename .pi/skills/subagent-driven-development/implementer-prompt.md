@@ -4,11 +4,16 @@ Use this template when dispatching an implementer subagent.
 
 ## Standard (Sequential or Single Task)
 
+```json
+{
+  "task": "You are implementing Task N: [task name]\n\n## Task Description\n\n[FULL TEXT of task from plan - paste it here, don't make subagent read file]\n\n## Context\n\n[Scene-setting: where this fits, dependencies, architectural context]"
+}
 ```
-Task tool (generalPurpose):
-  description: "Implement Task N: [task name]"
-  prompt: |
-    You are implementing Task N: [task name]
+
+Task body to include:
+
+```markdown
+You are implementing Task N: [task name]
 
     ## Task Description
 
@@ -30,7 +35,7 @@ Task tool (generalPurpose):
 
     ## Your Job
 
-    Once you're clear on requirements, follow TDD (red-green-refactor):
+    Once you're clear on requirements, follow /skill:test-driven-development:
     1. Write a failing test (RED)
     2. Write minimal code to pass (GREEN)
     3. Refactor if needed
@@ -127,6 +132,6 @@ When dispatching implementers that depend on prior wave outputs, the Controller 
 
 **Controller workflow for artifact passing:**
 1. After a wave completes, look at next wave's tasks and their "Blocked by" fields
-2. For each dependency, read the generated source files using Read tool
+2. For each dependency, read the generated source files using the `read` tool
 3. Extract exported interfaces, structs, and function signatures
 4. Paste the actual code into the downstream implementer's prompt

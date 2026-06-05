@@ -1,37 +1,37 @@
-# GORM Preload Pattern
+# GORM Preload 模式
 
-**Extracted:** 2026-01-28
-**Use case:** Avoid N+1 query problems when loading associated data
+**提取日期:** 2026-01-28
+**适用场景:** 需要查询关联数据时避免 N+1 问题
 
-## Problem
+## 问题
 
-Querying associated data one-by-one inside a loop causes N+1 query issues, severely impacting performance.
+在循环中逐个查询关联数据会导致 N+1 查询问题，严重影响性能。
 
-## Solution
+## 解决方案
 
-Use GORM's Preload method to load associated data in a single query.
+使用 GORM 的 Preload 方法一次性加载关联数据。
 
-## Example
+## 示例
 
 ```go
-// Wrong - N+1 queries
+// ❌ 错误 - N+1 查询
 certs, _ := repo.List(ctx)
 for _, cert := range certs {
     db.Where("cert_id = ?", cert.ID).Find(&cert.Deployments)
 }
 
-// Correct - Preload in one query
+// ✅ 正确 - Preload 一次查询
 db.Preload("Deployments").Find(&certs)
 
-// Correct - Conditional Preload
+// ✅ 正确 - 条件 Preload
 db.Preload("Deployments", "status = ?", "active").Find(&certs)
 
-// Correct - Nested Preload
+// ✅ 正确 - 嵌套 Preload
 db.Preload("Deployments.LoadBalancer").Find(&certs)
 ```
 
-## When to Use
+## 何时使用
 
-- List endpoints need to return associated data
-- SQL logs show many repeated queries
-- API response times are too long
+- 列表接口需要返回关联数据
+- SQL 日志中发现大量重复查询
+- 接口响应时间过长

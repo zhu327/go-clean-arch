@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Explore user intent and turn ideas into fully formed designs through collaborative dialogue. Use before creating features, building components, adding functionality, or modifying behavior. Ensures requirements are clear before implementation begins.
+description: "Use before creative or behavior-changing work: new features, components, workflows, functionality, or modifications. Explores user intent, constraints, alternatives, and design before planning or implementation."
 ---
 
 # Brainstorming Ideas Into Designs
@@ -13,11 +13,11 @@ Start by understanding the current project context, then ask questions to refine
 
 ## The Process
 
-**IMPORTANT:** Use the `AskQuestion` tool for all questions - provide structured options instead of asking in plain text.
+**IMPORTANT:** Use the `question` tool for all questions - provide structured options instead of asking in plain text.
 
 **Understanding the idea:**
-- Check out the current project state first (files, docs, recent commits)
-- Ask related questions together in one `AskQuestion` call (2-5 per batch), split only when answers have dependencies
+- Check out the current project state first (files, docs, recent commits) — use `bash` (`git log`, `ls`, `fd`/`rg`), `read` to explore
+- Ask related questions together in one `question` call (2-4 per batch), split only when answers have dependencies
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Focus on understanding: purpose, constraints, success criteria
 
@@ -36,16 +36,25 @@ Start by understanding the current project context, then ask questions to refine
 ## After the Design
 
 **Documentation:**
-- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md` using the `write` tool
 
 **Implementation (if continuing):**
 - Ask: "Ready to set up for implementation?"
-- Read and follow `writing-plans` skill to create detailed implementation plan
+- Use /skill:writing-plans to create detailed implementation plan
+
+### When invoked by /go
+
+Go mode changes only the post-design handoff:
+
+- Still use `question` for all requirement clarification and design approval.
+- Still write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
+- After the user approves the design and the design document is saved, do **not** ask “Ready to set up for implementation?”
+- Return control to the `/go` coordinator so it can automatically invoke `/skill:writing-plans`.
 
 ## Key Principles
 
-- **Use AskQuestion tool** - Use structured questions instead of plain text
-- **Batch related questions** - Ask related questions together (2-5 per batch), split only when answers have dependencies
+- **Use question tool** - Use structured questions instead of plain text
+- **Batch related questions** - Ask related questions together (2-4 per batch), split only when answers have dependencies
 - **Multiple choice preferred** - Easier to answer than open-ended when possible
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling
