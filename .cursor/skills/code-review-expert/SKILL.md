@@ -12,6 +12,8 @@ Perform a structured review of the current git changes with focus on SOLID, arch
 
 **Review philosophy**: Be ambitious about code structure. Do not merely identify local cleanup opportunities. Actively search for "code judo" moves — restructurings that preserve behavior while making the implementation dramatically simpler, smaller, more direct, and more elegant. Prefer the solution that makes the code feel inevitable in hindsight.
 
+**Iron Law**: Every P0/P1/P2 finding must follow the structure: **Symptom → Consequence → Remedy**. A finding without a consequence is noise — it tells the author *what* is wrong but not *why it matters*. A finding without a remedy is a complaint, not a review.
+
 ## Severity Levels
 
 | Level | Name | Description | Action |
@@ -99,6 +101,21 @@ Before diving into checklist-driven review, step back and ask the big-picture qu
   - **Structural quality**: file-size explosion, spaghetti growth, abstraction/boundary violations (see checklist)
 - Flag issues that may cause silent failures or production incidents.
 
+### 6.5) Test quality quick check (when diff includes test files)
+
+Skip this section if no test files appear in the diff. This is not a full test audit — only check tests that are part of the current change.
+
+- **Test Obscurity**: test names that don't describe scenario + expected outcome (e.g., `TestUser`, `TestHandler`); multiple assertions with no message string making failures undiagnosable (Assertion Roulette)
+- **Test Brittleness**: tests coupled to implementation details (private method results, internal state) rather than observable behavior; assertions that enforce mock call order or exact parameter values irrelevant to the behavior being tested
+- **Mock Abuse**: mock setup code longer than the test logic itself; primary assertion is `mock.AssertCalled(...)` rather than verifying real behavior occurred; single test using more than 3 mocks
+- **Coverage Illusion**: only happy-path tested for changed production code; error-handling branches, boundary conditions, and exception paths have no corresponding tests
+
+**What Not to Flag:**
+- Multiple assertions are acceptable when they describe one coherent behavior and fail with a clear story
+- A mock around a nondeterministic dependency (time, network, random) is fine if the assertion still verifies behavior
+- Shared test setup is fine when every initialized value is relevant to nearly every test in the group
+- Concise test names are acceptable if scenario and expected outcome are still obvious from context
+
 ### 7) Output format
 
 Structure your review as follows:
@@ -118,14 +135,18 @@ Structure your review as follows:
 
 ### P1 - High
 - **[file:line]** Brief title
-  - Description of issue
-  - Suggested fix
+  - Symptom: [exactly what was observed in the code]
+  - Consequence: [what breaks or gets worse if not fixed]
+  - Remedy: [concrete, specific action — prefer code-judo moves]
 
 ### P2 - Medium
-...
+- **[file:line]** Brief title
+  - Symptom: ...
+  - Consequence: ...
+  - Remedy: ...
 
 ### P3 - Low
-...
+(brief description + suggested fix; Consequence may be omitted for minor items)
 
 ---
 
@@ -142,7 +163,9 @@ Structure your review as follows:
 **Inline comments**: Use this format for file-specific findings:
 ```
 ::code-comment{file="path/to/file.go" line="42" severity="P1"}
-Description of the issue and suggested fix.
+Symptom: [what was observed]
+Consequence: [what breaks or degrades]
+Remedy: [concrete action]
 ::
 ```
 

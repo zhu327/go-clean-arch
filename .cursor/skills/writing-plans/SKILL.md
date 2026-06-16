@@ -293,6 +293,15 @@ git add internal/{domain}/
 
 After saving the plan, use `AskQuestion` to offer execution choice:
 
+**If Subagent-Driven chosen:**
+- Read and follow `.cursor/skills/subagent-driven-development/SKILL.md`
+- Stay in this session
+- Fresh subagent per task + code review
+- Use dependency graph to parallelize independent AFK tasks
+
+**If Parallel Session chosen:**
+- New session reads and follows `.cursor/skills/executing-plans/SKILL.md`
+
 ```
 AskQuestion({
   title: "执行方式选择",
@@ -306,12 +315,3 @@ AskQuestion({
   }]
 })
 ```
-
-**If Subagent-Driven chosen:**
-- Read and follow `.cursor/skills/subagent-driven-development/SKILL.md`
-- Stay in this session
-- Fresh subagent per task + code review
-- Use dependency graph to parallelize independent AFK tasks
-
-**If Parallel Session chosen:**
-- New session reads and follows `.cursor/skills/executing-plans/SKILL.md`

@@ -50,7 +50,12 @@
 - Generic "magic" handling that hides simple structure and makes the code harder to reason about.
 - Thin wrappers or identity abstractions that add indirection without simplifying anything.
 - Unnecessary casts, `any`, `interface{}`, or optional params that muddy the real contract.
-- Copy-pasted logic instead of extracted helpers.
+- **Knowledge duplication** (DRY is about decisions, not code lines):
+  - Same business decision expressed in multiple places — these copies will drift apart silently
+  - Same domain concept named differently in different parts of the codebase (e.g., `user`/`account`/`member`/`customer` all referring to one entity)
+  - Configuration values repeated as literals in multiple files instead of a single source of truth
+  - Two modules independently implementing the same algorithm or validation rule
+  - Copy-pasted logic instead of extracted helpers
 - Narrow edge-case handling implemented in the middle of an already busy function.
 - Refactors that technically pass tests but make the code less modular or less readable.
 - "Temporary" branching that is likely to become permanent debt.
@@ -91,6 +96,18 @@ Do not be satisfied with "maybe rename this" feedback when the real issue is str
 - "Is this abstraction actually earning its keep, or is it just a wrapper?"
 - "Is this logic living in the canonical layer, or did the diff leak details across a boundary?"
 - "Is this orchestration more sequential or less atomic than it needs to be?"
+
+### What Not to Flag
+
+- Linear code with clear names and guard clauses is not automatically high cognitive load — a 40-line function can be perfectly readable
+- A long routine may be acceptable when it is linear, well-named, and single-purpose
+- Internal implementation detail hidden behind a deep, simple module boundary is not a shallow-module problem
+- Temporary duplication during an active extraction or migration is not necessarily debt
+- Domain-specific terminology should not be flagged if it matches how experts actually speak
+- Thin wrappers that absorb vendor churn or hide instability may be justified
+- CRUD-heavy workflows may legitimately use simpler patterns than full DDD
+- Repetition across separate bounded contexts is not automatically duplicate knowledge — local ownership may be clearer than a shared dependency
+- Shared protocol constants repeated at explicit module boundaries may be acceptable when coupling cost exceeds duplication cost
 
 ---
 
