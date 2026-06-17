@@ -238,6 +238,7 @@ If a checklist item does not apply, mark it `N/A` with a short reason instead of
 ## Remember
 - Exact file paths always
 - Interface contracts + test-case descriptions in the plan, NOT implementation code — define the skeleton, not the body; leave the code to the TDD implementer
+- A one-line minimal code example is allowed only when a contract cannot be made clear in prose — never full method bodies
 - Exact validation commands where relevant
 - Reference relevant skills with @ syntax
 - DRY, YAGNI, TDD (enforced by the implementer, not re-written as numbered steps per task)

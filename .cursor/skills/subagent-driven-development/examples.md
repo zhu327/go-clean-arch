@@ -147,3 +147,45 @@ If you find a mismatch between the plan and the actual generated code, STOP and 
 2. Read those files using the Read tool
 3. Extract exported interfaces, structs, and function signatures
 4. Paste the actual code snippets into the next wave's implementer prompts
+
+## Falling Back to Sequential (No Dependency Graph)
+
+When the plan has no dependency graph, or every task shares files so nothing is parallelizable, SDD falls back to sequential execution. The spec-review gate still applies per task — there is just no wave parallelism.
+
+```
+You: Plan has no dependency graph — falling back to sequential execution.
+
+[Create TodoWrite: 3 tasks, all Wave 0, executed one at a time]
+
+═══ Task 1 (sequential) ═══
+[Dispatch 1 implementer → Agent A]
+[Agent A done → dispatch 1 spec reviewer]
+  Reviewer A: ❌ Missing error path
+[Resume Agent A to fix → re-review → ✅]
+[Validate: go build ✅, go test ✅, go vet ✅]
+[Mark Task 1 complete]
+
+═══ Task 2 (sequential) ═══
+[Dispatch 1 implementer → Agent B, with Task 1's actual signatures pasted in]
+[Agent B done → spec review → ✅]
+[Validate: go build ✅, go test ✅, go vet ✅]
+[Mark Task 2 complete]
+
+═══ Task 3 (sequential) ═══
+...same pattern...
+
+═══ Final Feature Acceptance Audit ═══
+[Controller checklist: all tasks done, all spec reviews passed, all validations passed]
+
+═══ Final Review ═══
+[Dispatch code-reviewer for the entire implementation — global architecture/quality pass]
+
+Done! 3 tasks, sequential. No parallelism, but the same correctness guarantees:
+per-task spec review + per-task validation + acceptance audit + global review.
+```
+
+What stays the same vs. the wave-parallel path:
+- One implementer at a time (no batching, no concurrency-limit concern)
+- Artifact passing is trivial — the prior task's output is already on disk — but still read the actual source and paste signatures into the next implementer
+- Validation runs after each task instead of after each wave
+- Everything else (spec-review gate, fix loops, acceptance audit, final review) is identical

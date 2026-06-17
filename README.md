@@ -177,18 +177,21 @@ Type `/go` followed by a requirement description in Cursor, and AI will complete
 The 5 automated stages:
 
 ```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ 1. Require-  │───▶│ 2. Design &  │───▶│ 3. Code      │───▶│ 4. Code      │───▶│ 5. Code      │
-│    ments     │    │    Planning  │    │ Implementa-  │    │    Review    │    │ Simplifi-    │
-│ brainstorming│    │writing-plans │    │executing-plans│    │code-reviewer │    │code-simplifier│
-│ ⬆ Only human │    │  Automatic   │    │  Automatic   │    │  Automatic   │    │  Automatic   │
-│  interaction │    │              │    │              │    │              │    │              │
-└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+┌────────────────┐    ┌────────────────┐    ┌────────────────────────┐    ┌────────────────┐    ┌────────────────┐
+│ 1. Require-    │───▶│ 2. Planning    │───▶│ 3. Wave Execution      │───▶│ 4. Code        │───▶│ 5. Code        │
+│    ments       │    │                │    │                        │    │    Review      │    │ Simplifi-      │
+│ brainstorming  │    │ writing-plans  │    │ subagent-driven-       │    │ code-reviewer  │    │ code-simplifier│
+│ ⬆ Only human   │    │   Automatic    │    │ development            │    │   Automatic    │    │   Automatic    │
+│  interaction   │    │                │    │   Automatic            │    │                │    │                │
+└────────────────┘    └────────────────┘    └────────────────────────┘    └────────────────┘    └────────────────┘
 ```
 
 - **Only step 1** requires human confirmation; steps 2-5 run fully automatically
-- Each step includes build verification (`go build`, `go vet`)
-- Issues found during review are auto-fixed and re-verified
+- Planning includes a **Plan Coverage Checklist** before execution
+- Execution uses **dependency-aware waves**; independent tasks run in parallel, blocked tasks run sequentially
+- Each task passes a **spec-compliance review** gate, and each wave ends with validation (`go build`, `go test`, `go vet`)
+- Final review focuses on **global architecture and code quality**; issues found during review are auto-fixed and re-verified
+- E2E tests for new API endpoints are planned as tasks in Step 2 and executed in Step 3
 
 ### Skills
 
@@ -198,9 +201,8 @@ Skills are reusable AI workflow instructions located in `.cursor/skills/`:
 |----------|-------|---------|---------|
 | **Flow** | `go` | End-to-end automated development (recommended) | `/go` + description |
 | **Flow** | `brainstorming` | Requirements exploration, outputs design spec | Auto-triggered before feature creation |
-| **Planning** | `writing-plans` | Write step-by-step implementation plans (with TDD) | Multi-step tasks with specs |
-| **Execution** | `executing-plans` | Execute plans in batches with checkpoints | Separate session plan execution |
-| **Execution** | `subagent-driven-development` | Subagent-driven, one agent per task | Current session plan execution |
+| **Planning** | `writing-plans` | Write implementation plans with dependency graphs and test scenarios | Multi-step tasks with specs |
+| **Execution** | `subagent-driven-development` | Dependency-aware wave execution with per-task spec review | Current session plan execution |
 | **Execution** | `dispatching-parallel-agents` | Dispatch multiple agents in parallel | 2+ independent tasks |
 | **Execution** | `test-driven-development` | TDD-driven development | New features, bug fixes |
 | **Review** | `code-review-expert` | SOLID / security / architecture review | Review git changes |
@@ -245,8 +247,8 @@ If you prefer not to use `/go`, you can trigger individual skills:
 # After design is confirmed, generate implementation plan
 /writing-plans Create an implementation plan based on the confirmed design
 
-# Execute the plan
-/executing-plans Execute docs/plans/2026-04-07-tag-module.md
+# Execute the plan (wave-parallel subagent-driven development)
+/subagent-driven-development Execute docs/plans/2026-04-07-tag-module.md
 
 # Review after completion
 /code-review-expert Review the current git changes

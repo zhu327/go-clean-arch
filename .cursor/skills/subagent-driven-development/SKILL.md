@@ -115,6 +115,8 @@ Before dispatching any implementer, verify the plan is executable:
 
 If API work is present and no E2E task exists, STOP before execution. E2E coverage must be added to the plan rather than bolted on as a post-implementation gate.
 
+**When any preflight check fails**, do not guess or silently work around it. STOP, return the specific gap to `writing-plans` for revision (e.g., add the missing E2E task, split file-conflicting tasks into separate waves, or fill in missing acceptance criteria / file paths), then re-run the preflight from the top. Only begin dispatching implementers once every check passes.
+
 ### Wave Computation Example
 
 Given dependency graph:
@@ -182,7 +184,7 @@ Task("Review spec compliance for Task 2")  // Reviewer B
 Task("Review spec compliance for Task 3")  // Reviewer C
 ```
 
-The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, in Phase 3. Use the `./spec-reviewer-prompt.md` template.
+The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, in Phase 4. Use the `./spec-reviewer-prompt.md` template.
 
 ### Step 5: Fix Spec Issues
 
@@ -218,6 +220,8 @@ After all waves complete and before global code review, run a lightweight accept
 - All wave validations passed (`go build ./...`, `go test ./...`, `go vet ./...` where applicable)
 - `make e2e` passed if API E2E tasks were added
 - Every task acceptance criterion has evidence from code, tests, or reviewer output
+- The implemented feature, taken as a whole, satisfies the approved goal/requirements from brainstorming — not just that each task's acceptance criterion has evidence
+- All cross-wave public interfaces/contracts match the plan; when in doubt, read the actual source of downstream dependencies and compare against the plan's Interface Contracts
 - Any deviation from the approved requirements/design is documented and explicitly approved
 
 If any item fails, fix or escalate before global code review. Do not send an incomplete feature to `code-reviewer` and ask it to rediscover functional gaps.
@@ -353,7 +357,7 @@ If the plan has **no dependency graph** or all tasks share files:
 - Per-task spec review verifies functional correctness (builds, tests pass, acceptance criteria met)
 - Review loops ensure fixes actually work
 - Spec compliance prevents over/under-building
-- One global architecture/quality review (Phase 3) catches cross-cutting issues without per-task overhead
+- One global architecture/quality review (Phase 4) catches cross-cutting issues without per-task overhead
 
 **Cost:**
 - One implementer + one spec reviewer per task (plus the single final code-reviewer)
@@ -372,7 +376,7 @@ If the plan has **no dependency graph** or all tasks share files:
 - `e2e-testing` — Subagents add E2E tests when implementing API endpoints (E2E tests are planned as tasks, not a separate gate)
 
 **Final review:**
-- `code-reviewer` agent — Dispatched once in Phase 3 for the global architecture/quality pass (it loads `code-review-expert` internally)
+- `code-reviewer` agent — Dispatched once in Phase 4 for the global architecture/quality pass (it loads `code-review-expert` internally)
 
 **Related workflows:**
 - `dispatching-parallel-agents` — Use for concurrent independent ad-hoc problems, NOT for plan execution
