@@ -59,7 +59,11 @@ Ask the user:
 
 ### 4. Write the Full Plan
 
-Expand each approved slice into the full Task Structure (see below) and save the plan document.
+Expand each approved slice into the full Task Structure (see below), add the Plan Coverage Checklist, and save the plan document.
+
+### 5. Plan Coverage Check
+
+Before handing off to execution, explicitly verify the plan covers the approved requirements and has the guardrails needed for autonomous execution. If any checklist item fails, revise the plan before proceeding — do not hand off a known-incomplete plan.
 
 ## Task Granularity
 
@@ -211,6 +215,26 @@ If the feature adds or modifies API endpoints, the plan MUST include one or more
 - Lists the endpoints + scenarios to cover (use the `e2e-testing` skill for the methodology)
 - Has acceptance criteria like: `make e2e` passes (existing + new tests)
 
+## Plan Coverage Checklist
+
+Every plan MUST include this checklist before the Execution Handoff. Fill it in based on the approved brainstorming requirements/design and the final task list:
+
+```markdown
+## Plan Coverage Checklist
+
+- [ ] Every approved requirement maps to at least one task
+- [ ] Every task has clear acceptance criteria
+- [ ] Every task lists behavior-focused test cases
+- [ ] Every task lists exact Create/Modify file paths
+- [ ] New or modified API endpoints have E2E test task(s)
+- [ ] The dependency graph has no cycles
+- [ ] Parallelizable tasks do not modify the same files
+- [ ] No task is purely horizontal unless it is unavoidable infrastructure
+- [ ] Known assumptions or deviations from the approved design are documented
+```
+
+If a checklist item does not apply, mark it `N/A` with a short reason instead of silently omitting it.
+
 ## Remember
 - Exact file paths always
 - Interface contracts + test-case descriptions in the plan, NOT implementation code — define the skeleton, not the body; leave the code to the TDD implementer
@@ -218,6 +242,7 @@ If the feature adds or modifies API endpoints, the plan MUST include one or more
 - Reference relevant skills with @ syntax
 - DRY, YAGNI, TDD (enforced by the implementer, not re-written as numbered steps per task)
 - If the plan adds/modifies API endpoints, it MUST include E2E test tasks (use `e2e-testing` skill) — E2E is a planned task, not a separate post-implementation gate
+- Include and complete the Plan Coverage Checklist before handoff
 - Vertical slices, not horizontal layers — each task must be independently verifiable
 - Declare dependencies explicitly — enable parallel execution where possible
 

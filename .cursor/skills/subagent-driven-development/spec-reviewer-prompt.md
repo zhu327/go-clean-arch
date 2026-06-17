@@ -2,7 +2,7 @@
 
 Use this template when dispatching a spec compliance reviewer subagent.
 
-**Purpose:** Verify the implementer built what was requested — nothing more, nothing less — and that it actually works (builds, tests pass, acceptance criteria met). This is the sole per-task **spec-compliance gate** in subagent-driven-development. Architecture and code-quality are reviewed separately and globally afterward (Phase 3, via the `code-reviewer` agent), so they are explicitly OUT OF SCOPE here. Focus only on functional correctness and spec conformance.
+**Purpose:** Verify the implementer built what was requested — nothing more, nothing less — and that it actually works (builds, tests pass, acceptance criteria met). This is the sole per-task **spec-compliance gate** in subagent-driven-development. Architecture and code-quality are reviewed separately and globally afterward (final review, via the `code-reviewer` agent), so they are explicitly OUT OF SCOPE here. Focus only on functional correctness and spec conformance.
 
 ```
 Task tool (generalPurpose):
@@ -40,7 +40,8 @@ Task tool (generalPurpose):
     requested behavior correctly. You are NOT evaluating code quality — naming, structure,
     style, abstraction quality, SOLID, performance, security are all out of scope here. Those
     are handled once, globally, by a separate code-reviewer agent after all waves finish. If
-    you notice a code-quality nit while reading, ignore it (unless it is a correctness bug).
+    you notice a code-quality nit while reading, ignore it unless it creates a correctness or
+    spec-compliance problem.
 
     Read the implementation code and verify:
 
@@ -52,8 +53,12 @@ Task tool (generalPurpose):
 
     **Extra/unneeded work:**
     - Did they build things that weren't requested?
-    - Did they over-engineer or add unnecessary features?
     - Did they add "nice to haves" that weren't in spec?
+    - Did they change public contracts, observable behavior, dependencies, or files beyond the task without being asked?
+
+    Only flag over-engineering when it affects scope, observable behavior, public API/contracts,
+    dependencies, file ownership, testability of the acceptance criteria, or correctness. Do NOT
+    flag purely internal style/structure choices here; the global code-reviewer owns those.
 
     **Functional correctness & tests:**
     - Do the tests they claim actually exist, and do they test real behavior (not just mock interactions)?
@@ -64,7 +69,7 @@ Task tool (generalPurpose):
     **Misunderstandings:**
     - Did they interpret requirements differently than intended?
     - Did they solve the wrong problem?
-    - Did they implement the right feature but wrong way?
+    - Did they implement the right feature with the wrong observable behavior or wrong public contract?
 
     **Verify by reading code and running tests, not by trusting report.**
 

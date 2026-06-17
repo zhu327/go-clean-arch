@@ -132,7 +132,7 @@ Return: Summary of what you found and what you fixed.
 | | Parallel Agents (this skill) | Subagent-Driven Development |
 |---|---|---|
 | **Input** | Ad-hoc problems/failures | Implementation plan from `writing-plans` |
-| **Execution** | All agents run concurrently | One task at a time, sequentially |
+| **Execution** | All agents run concurrently | Dependency-aware waves; parallel when file-safe, sequential fallback when needed |
 | **Review** | Post-integration only | Spec review after each task |
 | **When** | Multiple independent bugs/issues | Building features from a plan |
 | **Agent count** | N agents simultaneously | 1 implementer + 1 spec reviewer per task |
@@ -146,7 +146,7 @@ Return: Summary of what you found and what you fixed.
 **Need full context:** Understanding requires seeing entire system
 **Exploratory debugging:** You don't know what's broken yet
 **Shared state:** Agents would interfere (editing same files, using same resources)
-**Implementation plan:** Use `subagent-driven-development` for planned, sequential work
+**Implementation plan:** Use `subagent-driven-development` for planned, dependency-aware wave execution
 
 ## Real Example from Session
 

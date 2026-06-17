@@ -18,13 +18,14 @@ The most efficient way to develop features. Simply describe your requirement and
 
 Automated pipeline:
 ```
-Requirements → Design & Planning → Implementation → Code Review → Simplification
-(brainstorming)  (writing-plans)  (executing-plans) (code-reviewer) (code-simplifier)
+Requirements → Planning → Wave Execution → Code Review → Simplification
+(brainstorming)  (writing-plans)  (subagent-driven-development) (code-reviewer) (code-simplifier)
 ```
 
 - Only the first step (brainstorming) requires human confirmation; the rest runs automatically
-- Each step includes validation (`go build`, `go vet`, `go test`)
-- Issues found during review are auto-fixed and re-verified
+- Planning includes a coverage checklist before execution
+- Execution uses per-task spec review plus wave validation (`go build`, `go vet`, `go test`)
+- Final review focuses on global architecture/code quality; issues found during review are auto-fixed and re-verified
 
 ### Step-by-Step Workflow
 
@@ -34,8 +35,7 @@ For finer-grained control, use individual skills:
 |-------|-------|-------------|
 | Requirements | `brainstorming` | Turn ideas into complete designs and specs |
 | Planning | `writing-plans` | Write detailed implementation plans (with TDD) |
-| Execution | `executing-plans` | Execute plans in batches with review checkpoints |
-| Execution (parallel) | `subagent-driven-development` | Subagent-driven development with two-stage review |
+| Execution | `subagent-driven-development` | Execute plans with dependency-aware wave parallelism, per-task spec review, and final global code review |
 | Review | `code-review-expert` | SOLID, security, architecture review |
 
 ## Skills Overview
@@ -57,8 +57,7 @@ For finer-grained control, use individual skills:
 
 | Skill | Purpose | Trigger |
 |-------|---------|---------|
-| `executing-plans` | Execute plans in batches | Separate session with checkpoints |
-| `subagent-driven-development` | Subagent-driven development | Current session, one subagent per task |
+| `subagent-driven-development` | Subagent-driven development | Current session, one subagent per task, wave-parallel when safe |
 | `dispatching-parallel-agents` | Dispatch parallel agents | 2+ independent tasks |
 | `test-driven-development` | TDD development | New features, bug fixes, refactoring |
 
@@ -81,7 +80,7 @@ When multiple skills may apply, use them in this order:
 
 1. **Flow** (`brainstorming`) — Decide how to approach the task
 2. **Planning** (`writing-plans`) — Create the implementation plan
-3. **Execution** (`executing-plans`, `subagent-driven-development`, `test-driven-development`) — Execute the plan
+3. **Execution** (`subagent-driven-development`, `test-driven-development`) — Execute the plan
 4. **Dispatch** (`dispatching-parallel-agents`) — Solve multiple independent problems in parallel
 5. **Review** (`code-review-expert`) — Quality assurance
 

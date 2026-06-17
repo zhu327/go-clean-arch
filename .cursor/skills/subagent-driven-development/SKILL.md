@@ -40,6 +40,7 @@ digraph process {
     rankdir=TB;
 
     "Parse plan: extract tasks, dependency graph, file lists" [shape=box];
+    "Run plan preflight checks" [shape=box];
     "Compute execution waves via topological sort" [shape=box];
     "Verify file conflicts within each wave" [shape=box];
     "Create TodoWrite with all tasks" [shape=box];
@@ -60,9 +61,11 @@ digraph process {
     }
 
     "More waves?" [shape=diamond];
+    "Run final feature acceptance audit" [shape=box];
     "Dispatch final code-reviewer for entire implementation" [shape=box];
 
-    "Parse plan: extract tasks, dependency graph, file lists" -> "Compute execution waves via topological sort";
+    "Parse plan: extract tasks, dependency graph, file lists" -> "Run plan preflight checks";
+    "Run plan preflight checks" -> "Compute execution waves via topological sort";
     "Compute execution waves via topological sort" -> "Verify file conflicts within each wave";
     "Verify file conflicts within each wave" -> "Create TodoWrite with all tasks";
     "Create TodoWrite with all tasks" -> "Handle HITL tasks first (ask user)";
@@ -81,7 +84,8 @@ digraph process {
 
     "Mark all wave tasks complete" -> "More waves?";
     "More waves?" -> "Handle HITL tasks first (ask user)" [label="yes - next wave"];
-    "More waves?" -> "Dispatch final code-reviewer for entire implementation" [label="no"];
+    "More waves?" -> "Run final feature acceptance audit" [label="no"];
+    "Run final feature acceptance audit" -> "Dispatch final code-reviewer for entire implementation";
 }
 ```
 
@@ -90,12 +94,26 @@ digraph process {
 1. Read the plan file once
 2. Extract the **Task Dependency Graph** (the table with "Blocked by" and "Parallelizable with" columns)
 3. Extract the **Files** section of each task (Create/Modify lists)
-4. Compute execution waves via topological sort:
+4. Run **Plan Preflight Checks** (below). If a required item fails, STOP and report the missing plan detail instead of guessing.
+5. Compute execution waves via topological sort:
    - **Wave 0:** tasks with no dependencies (can start immediately)
    - **Wave N:** tasks whose ALL dependencies are in waves < N
-5. Verify file safety within each wave (see File Conflict Safety below)
-6. Separate HITL from AFK tasks within each wave
-7. Create TodoWrite with all tasks, annotated with wave number
+6. Verify file safety within each wave (see File Conflict Safety below)
+7. Separate HITL from AFK tasks within each wave
+8. Create TodoWrite with all tasks, annotated with wave number
+
+### Plan Preflight Checks
+
+Before dispatching any implementer, verify the plan is executable:
+
+- The plan contains a **Plan Coverage Checklist** and it has no unchecked required items
+- Every task has acceptance criteria, test cases, and exact Create/Modify file paths
+- The dependency graph has no cycles; if no graph exists, explicitly fall back to sequential execution
+- Tasks planned for the same wave do not modify the same files (or are split into sub-waves)
+- If the plan or approved design adds/modifies API endpoints, the plan includes E2E test task(s)
+- Any documented assumption/deviation is explicit enough for implementers and reviewers
+
+If API work is present and no E2E task exists, STOP before execution. E2E coverage must be added to the plan rather than bolted on as a post-implementation gate.
 
 ### Wave Computation Example
 
@@ -191,9 +209,22 @@ Tasks that pass spec review are ready for wave validation.
 3. Mark all wave tasks complete in TodoWrite
 4. Proceed to next wave
 
-## Phase 3: Final Review
+## Phase 3: Final Feature Acceptance Audit
 
-After all waves complete, dispatch `code-reviewer` subagent for the entire implementation (all files changed across all waves). This is the single, global architecture/code-quality pass — it assumes functional correctness is already verified by the per-task spec reviews and wave validation, and focuses on SOLID, security, and code-judo simplification opportunities.
+After all waves complete and before global code review, run a lightweight acceptance audit. This is NOT a second code-quality review and does NOT replace the per-task spec reviews. It is a controller checklist to prove the planned feature is complete:
+
+- All planned tasks are completed
+- All task spec reviews passed
+- All wave validations passed (`go build ./...`, `go test ./...`, `go vet ./...` where applicable)
+- `make e2e` passed if API E2E tasks were added
+- Every task acceptance criterion has evidence from code, tests, or reviewer output
+- Any deviation from the approved requirements/design is documented and explicitly approved
+
+If any item fails, fix or escalate before global code review. Do not send an incomplete feature to `code-reviewer` and ask it to rediscover functional gaps.
+
+## Phase 4: Final Review
+
+After the acceptance audit passes, dispatch `code-reviewer` subagent for the entire implementation (all files changed across all waves). This is the single, global architecture/code-quality pass — functional correctness should already have been checked by per-task spec reviews, wave validation, and the acceptance audit. The reviewer focuses on SOLID, security, and code-judo simplification opportunities, while still flagging obvious correctness bugs noticed during review.
 
 ## File Conflict Safety
 
