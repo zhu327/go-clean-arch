@@ -1,0 +1,123 @@
+---
+description: Wire dependency injection standards - Provider Set organization, interface binding
+globs: "**/di/*.go"
+alwaysApply: false
+---
+
+# Wire Dependency Injection Standards
+
+The project uses Google Wire for compile-time dependency injection, configured in `internal/di/wire.go`.
+
+## Current Provider Organization
+
+```go
+//go:build wireinject
+
+package di
+
+import (
+    delivery "go-clean-arch/internal/shared/adapter/delivery"
+    userHandler "go-clean-arch/internal/user/adapter/delivery/http/handler"
+    userRepo "go-clean-arch/internal/user/adapter/repository"
+    userUsecase "go-clean-arch/internal/user/usecase"
+    "go-clean-arch/pkg/auth"
+    "go-clean-arch/pkg/config"
+    "go-clean-arch/pkg/db"
+
+    "github.com/google/wire"
+)
+
+func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
+    wire.Build(
+        db.ConnectDatabase,
+        auth.NewTokenService,
+        userRepo.NewUserRepository,
+        wire.Bind(new(userUsecase.UserRepository), new(*userRepo.UserRepository)),
+        userUsecase.NewUserManager,
+        userHandler.NewUserHandler,
+        delivery.NewServer,
+    )
+    return &delivery.Server{}, nil
+}
+```
+
+## Interface Binding
+
+```go
+// Bind concrete implementation to the interface defined in the usecase layer
+wire.Bind(new(userUsecase.UserRepository), new(*userRepo.UserRepository))
+```
+
+## Adding a New Domain Module
+
+### 1. Add new Repository
+
+```go
+articleRepo.NewArticleRepository,
+wire.Bind(new(articleUsecase.ArticleRepository), new(*articleRepo.ArticleRepository)),
+```
+
+### 2. Add new Manager
+
+```go
+articleUsecase.NewArticleManager,
+```
+
+### 3. Add new Handler
+
+```go
+articleHandler.NewArticleHandler,
+```
+
+### 4. Update Server constructor
+
+`NewServer` must accept the new Handler parameter:
+
+```go
+func NewServer(
+    userHandler *userHandler.UserHandler,
+    articleHandler *articleHandler.ArticleHandler,
+) *Server {
+    // ...
+    router.SetupRouter(engine, router.RouterParams{
+        UserHandler:    userHandler,
+        ArticleHandler: articleHandler,
+    })
+    // ...
+}
+```
+
+## Import Alias Conventions
+
+When multiple domains have packages with the same name, use aliases:
+
+```go
+import (
+    userHandler "go-clean-arch/internal/user/adapter/delivery/http/handler"
+    userRepo "go-clean-arch/internal/user/adapter/repository"
+    userUsecase "go-clean-arch/internal/user/usecase"
+
+    articleHandler "go-clean-arch/internal/article/adapter/delivery/http/handler"
+    articleRepo "go-clean-arch/internal/article/adapter/repository"
+    articleUsecase "go-clean-arch/internal/article/usecase"
+)
+```
+
+## Code Generation
+
+After modifying `wire.go`, run:
+
+```bash
+make di
+```
+
+This generates the `wire_gen.go` file.
+
+## File Header Tag
+
+```go
+//go:build wireinject
+// +build wireinject
+
+package di
+```

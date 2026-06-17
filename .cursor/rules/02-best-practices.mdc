@@ -1,0 +1,92 @@
+---
+description: Best practices - security, performance, configuration management, development workflow
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Best Practices
+
+## Security Considerations
+
+- Validate all input parameters
+- Use prepared statements (handled by GORM)
+- Sanitize data at the DTO layer
+- Implement proper authentication middleware
+- Log security-related events
+- WrapError logs internal details only; never expose them to clients
+
+```go
+// Wrong - using raw user input
+query := fmt.Sprintf("SELECT * FROM users WHERE name = '%s'", name)
+
+// Correct - parameterized query via GORM
+db.Where("name = ?", name).Find(&users)
+```
+
+## Performance Guidelines
+
+- Use database indexes appropriately
+- List endpoints must implement pagination
+- Cache frequently accessed data where appropriate
+- Use database transactions carefully
+
+```go
+// Pagination query example
+func (r *Repository) List(ctx context.Context, offset, limit int) ([]*domain.Entity, error) {
+    var models []EntityModel
+    err := r.db.WithContext(ctx).Offset(offset).Limit(limit).Find(&models).Error
+    // ...
+}
+```
+
+## Configuration Management
+
+- Use Viper to load config (`.env` file or environment variables)
+- Pass sensitive data through environment variables
+- Validate config completeness on startup
+
+```bash
+# .env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=mydb
+DB_USER=postgres
+DB_PASSWORD=secret
+SECRET_KEY=your-jwt-secret
+```
+
+## Feature Development Workflow
+
+When implementing new features, follow this order:
+
+1. **Domain layer**: Define entities and business rules
+2. **UseCase layer**: Implement Manager, define interfaces (`interfaces.go`)
+3. **Repository**: Implement data access
+4. **Handler layer**: Create HTTP Handler and DTOs
+5. **Router config**: Register routes in domain router, register domain router in shared router
+6. **Swagger docs**: Add complete API doc annotations
+7. **Unit tests**: Write test cases
+8. **Wire registration**: Update dependency injection config
+
+```bash
+# After development is complete, run:
+make di      # Generate dependency injection code
+make doc     # Generate API docs
+make lint    # Run linter
+make test    # Run tests
+```
+
+## Middleware Usage
+
+| Middleware | Purpose | Scope |
+| :--- | :--- | :--- |
+| `gin.Recovery()` | Panic recovery | Global |
+| `ErrorHandler()` | Unified error handling | Global |
+| `gin.Logger()` | Request logging | Global |
+
+```go
+// server.go middleware configuration
+engine.Use(gin.Recovery())
+engine.Use(middleware.ErrorHandler())
+engine.Use(gin.Logger())
+```

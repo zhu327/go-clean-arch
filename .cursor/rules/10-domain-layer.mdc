@@ -1,0 +1,122 @@
+---
+description: Domain layer development standards - entity definitions, status types, business methods
+globs: "**/domain/*.go"
+alwaysApply: false
+---
+
+# Domain Layer Development Standards
+
+The Domain layer is the core of Clean Architecture, containing pure business logic with **no external framework dependencies**.
+
+## Entity Definition
+
+```go
+// Certificate represents a certificate entity.
+type Certificate struct {
+    CertID            string
+    CertName          string
+    Domain            string
+    Status            CertStatus
+    RemainDays        int
+    ExpireDate        time.Time
+    CertTopoInfo      *CertTopoInfo // Optional association
+}
+```
+
+**Key rules**:
+- Fields use PascalCase
+- Use comments to explain business meaning
+- Associated entities use pointer types
+- No JSON/GORM framework tags
+
+## Status Type Definition
+
+```go
+// CertStatus represents the certificate status type.
+type CertStatus string
+
+const (
+    CertStatusValid       CertStatus = "valid"
+    CertStatusExpiringSoon CertStatus = "expiring_soon"
+    CertStatusExpired     CertStatus = "expired"
+)
+
+// Business constants
+const (
+    CertExpiredDays      = 0
+    CertExpiringSoonDays = 30
+)
+```
+
+**Key rules**:
+- Status type: `type XxxStatus string`
+- Constant naming: `XxxStatusYyy`
+- Constant values use lowercase strings
+
+## Entity Methods
+
+```go
+// IsExpired returns whether the certificate has expired.
+func (c *Certificate) IsExpired() bool {
+    return c.RemainDays <= CertExpiredDays
+}
+
+// IsExpiringSoon returns whether the certificate is expiring soon.
+func (c *Certificate) IsExpiringSoon() bool {
+    return c.RemainDays > CertExpiredDays && c.RemainDays <= CertExpiringSoonDays
+}
+
+// CanBeRenewed returns whether the certificate can be renewed.
+func (c *Certificate) CanBeRenewed() bool {
+    return c.Status == CertStatusValid || c.Status == CertStatusExpiringSoon
+}
+```
+
+**Method naming conventions**:
+| Prefix | Purpose | Example |
+| :--- | :--- | :--- |
+| `Is` | Boolean query | `IsExpired()`, `IsValid()` |
+| `Can` | Capability check | `CanBeRenewed()`, `CanBeDeleted()` |
+| `Get` | Computed value | `GetLevel()`, `GetFullName()` |
+| `Update` | State update | `UpdateStatus()`, `UpdateCounts()` |
+
+## Value Object Methods
+
+```go
+// Priority returns the status priority (used for sorting).
+func (s CertStatus) Priority() int {
+    switch s {
+    case CertStatusExpired:
+        return 1
+    case CertStatusExpiringSoon:
+        return 2
+    default:
+        return 3
+    }
+}
+```
+
+## Package-Level Utility Functions
+
+```go
+// BuildPublicRecordKey builds a unique key for a public DNS record.
+func BuildPublicRecordKey(fullDomain, recordType, recordValue string) string {
+    return fmt.Sprintf("%s:%s:%s", fullDomain, recordType, recordValue)
+}
+
+// ExtractMasterDomain extracts the master domain from a full domain name.
+func ExtractMasterDomain(fullDomain string) (string, error) {
+    // Business logic...
+}
+```
+
+## Prohibited
+
+- No dependencies on Gin, GORM, Wire, or other frameworks
+- No `json:`, `gorm:` or similar tags
+- No database or external service calls
+- No HTTP request/response structs
+
+**Allowed dependencies**:
+- Go standard library
+- `pkg/utils` utility package (time handling, etc.)

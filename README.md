@@ -1,214 +1,255 @@
 # Go Clean Architecture Template
 
-This repository provides a template for building Go applications following the principles of Clean Architecture. It uses [Google Wire](https://github.com/google/wire) for compile-time dependency injection, promoting a modular, testable, and maintainable codebase.
+This repository provides a template for building Go applications following **DDD (Domain-Driven Design) + Clean Architecture** principles. Each bounded context is organized as a self-contained domain module, promoting modularity, testability, and maintainability.
 
 ## Features
 
-- **Clean Architecture**: A clear separation of concerns between business logic and infrastructure.
-- **Dependency Injection**: Compile-time DI using Google Wire, avoiding reflection.
-- **Structured Logging**: Ready-to-use structured logging setup.
+- **DDD + Clean Architecture**: Domain-first organization with clear layer boundaries.
+- **Domain Module Pattern**: Each bounded context has its own `domain/`, `usecase/`, and `adapter/` layers.
+- **Dependency Injection**: Compile-time DI using Google Wire with grouped `wire.NewSet` bindings.
+- **Unified Error Handling**: `AppError` pattern with ErrorHandler middleware.
+- **Structured Logging**: `pkg/log` for JSON-formatted structured logging.
 - **Configuration Management**: Environment-based configuration using Viper.
 - **Docker Support**: Includes `Dockerfile` and `docker-compose.yaml` for easy setup and deployment.
 
 ## Architecture Design
 
-This project strictly adheres to the Clean Architecture principles to ensure the codebase is scalable, maintainable, and easy to test.
+This project adopts a **domain-first** layout where dependency direction flows **only inward**:
+
+```
+External World (HTTP, DB, External APIs)
+ ↓
+Adapter Layer (Delivery, Repository, Gateway)
+ ↓
+UseCase Layer (Business logic orchestration, interface definitions)
+ ↓
+Domain Layer (Core entities, business rules)
+```
 
 ### Architectural Diagram
-
-The following diagram illustrates the layered architecture and the Dependency Inversion Principle. All dependencies flow inwards.
 
 ```mermaid
 graph TD
     subgraph "External World"
         Client[Client / Web UI]
-        ExtAPI[External API]
         DB[(Database)]
     end
 
-    subgraph "Adapter Layer"
-        subgraph "Delivery"
-            HTTP["HTTP Handlers<br/>(e.g., Gin, Echo)"]
-            gRPC[gRPC Handlers]
+    subgraph "Shared Infrastructure"
+        Server["Server<br/>(Gin Engine)"]
+        Router["Central Router"]
+        MW["Middleware<br/>(ErrorHandler, Recovery)"]
+    end
+
+    subgraph "User Domain Module"
+        subgraph "Adapter Layer"
+            UserHTTP["HTTP Handler"]
+            UserRouter["Domain Router"]
+            UserRepo["Repository<br/>(GORM)"]
         end
-        
-        subgraph "Gateway"
-            APIGateway[External API<br/>Gateway]
+
+        subgraph "UseCase Layer"
+            UserManager["UserManager"]
+            UserInterfaces["interfaces.go<br/>(Ports)"]
+            UserDTO["UseCase DTOs"]
         end
-        
-        subgraph "Repository"
-            DBRepo[Database<br/>Repository]
-            CacheRepo[Cache<br/>Repository]
+
+        subgraph "Domain Layer"
+            UserEntity["User Entity"]
+            UserRules["Business Rules<br/>& Validation"]
         end
     end
 
-    subgraph "Use Case Layer"
-        UCInterface[Use Case<br/>Interfaces]
-        SubDomainUC[SubDomain<br/>Use Case]
-        UserUC[User<br/>Use Case]
-        
-        subgraph "DTOs"
-            ReqDTO[Request DTOs]
-            RespDTO[Response DTOs]
-        end
-    end
+    Client --> Server
+    Server --> MW --> Router
+    Router --> UserRouter --> UserHTTP
+    UserHTTP --> UserManager
+    UserManager --> UserInterfaces
+    UserRepo -.->|implements| UserInterfaces
+    UserManager --> UserEntity
+    UserManager --> UserRules
+    UserManager -.-> UserDTO
+    UserRepo --> DB
 
-    subgraph "Domain Layer"
-        Entities[Domain Entities<br/>SubDomain, User]
-        ValueObjects[Value Objects<br/>Status, Types]
-        DomainServices[Domain Service<br/>Interfaces]
-        BusinessRules["Business Rules<br/>& Validation"]
-    end
-
-    %% External connections
-    Client --> HTTP
-    Client --> gRPC
-    ExtAPI --> APIGateway
-    DBRepo --> DB
-    CacheRepo --> DB
-
-    %% Dependency direction (inward only)
-    HTTP --> UserUC
-    gRPC --> SubDomainUC
-    
-    APIGateway --> SubDomainUC
-    
-    UserUC --> DBRepo
-    SubDomainUC --> CacheRepo
-    
-    %% Use case to domain
-    UserUC --> Entities
-    UserUC --> DomainServices
-    SubDomainUC --> Entities
-    SubDomainUC --> BusinessRules
-    
-    %% DTOs used by use cases
-    UserUC -.-> ReqDTO
-    UserUC -.-> RespDTO
-    
-    %% Interface implementation (dependency inversion)
-    DBRepo -.->|implements| UCInterface
-    APIGateway -.->|implements| UCInterface
-    
     classDef domainStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef usecaseStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef adapterStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef externalStyle fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    
-    class Entities,ValueObjects,DomainServices,BusinessRules domainStyle
-    class UCInterface,SubDomainUC,UserUC,ReqDTO,RespDTO usecaseStyle
-    class HTTP,gRPC,APIGateway,DBRepo,CacheRepo adapterStyle
-    class Client,ExtAPI,DB externalStyle
+    classDef sharedStyle fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef externalStyle fill:#fce4ec,stroke:#b71c1c,stroke-width:2px
+
+    class UserEntity,UserRules domainStyle
+    class UserManager,UserInterfaces,UserDTO usecaseStyle
+    class UserHTTP,UserRouter,UserRepo adapterStyle
+    class Server,Router,MW sharedStyle
+    class Client,DB externalStyle
 ```
 
 ### Layer Descriptions
 
--   **🔵 Domain Layer**: Contains the core business logic and entities. It is the most independent layer and has no dependencies on any other layer.
--   **🟣 Use Case Layer**: Orchestrates the business workflows by interacting with the Domain Layer. It defines interfaces that the Adapter Layer implements.
--   **🟠 Adapter Layer**: Acts as a bridge to the outside world (e.g., UI, databases, external APIs). It implements the interfaces defined by the Use Case Layer.
--   **🟢 External World**: Represents external systems that interact with the application, such as web clients, databases, or third-party services.
+- **Domain Layer**: Core business entities and rules. No dependencies on any other layer.
+- **UseCase Layer**: Orchestrates business workflows. Defines port interfaces (`interfaces.go`) that adapters implement.
+- **Adapter Layer**: Bridges to the outside world (HTTP handlers, database repositories, external API gateways).
+- **Shared Infrastructure**: HTTP server assembly, central router registration, cross-cutting middleware.
 
 ### Key Principles
 
-1.  **Dependency Direction**: All dependencies must point inwards. The Domain layer is at the center, and no inner layer can depend on an outer layer. This is the core of Dependency Inversion.
-2.  **Interface Segregation**: Interfaces are defined by the consumer (Use Case layer) and implemented by the provider (Adapter layer). This decouples the business logic from the infrastructure details.
-3.  **Layer Isolation**: Each layer interacts only with its adjacent layer, maintaining a clear separation of responsibilities.
+1. **Dependency Direction**: All dependencies point inward. Inner layers never depend on outer layers.
+2. **Domain Module Isolation**: Each bounded context (e.g., User) is self-contained with its own layers.
+3. **Interface Segregation**: Ports are defined by the consumer (UseCase) and implemented by the provider (Adapter).
+4. **Unified Error Handling**: Use `AppError` + `ErrorHandler` middleware instead of ad-hoc error responses.
 
 ## Project Structure
 
 ```
-internal/
-├── domain/          # Domain Layer (business entities and rules)
-├── usecase/         # Use Case Layer (business logic, interfaces, DTOs)
-├── adapter/         # Adapter Layer
-│   ├── delivery/    # Delivery mechanisms (e.g., HTTP, gRPC handlers)
-│   ├── repository/  # Repository implementations (database access)
-│   └── gateway/     # Gateways to external services
-└── di/              # Dependency Injection configuration (Wire)
+├── cmd/
+│   └── api/
+│       └── main.go                              # Entry point
+├── internal/
+│   ├── user/                                    # User domain module
+│   │   ├── domain/                              # Domain entities & business rules
+│   │   │   └── user.go
+│   │   ├── usecase/                             # Business logic orchestration
+│   │   │   ├── interfaces.go                    # Ports (Repository/Gateway interfaces)
+│   │   │   ├── user.go                          # UserManager implementation
+│   │   │   ├── dto/                             # UseCase-level DTOs
+│   │   │   │   └── user.go
+│   │   │   └── mock/                            # Generated mocks
+│   │   │       └── interfaces.go
+│   │   └── adapter/                             # Infrastructure implementations
+│   │       ├── delivery/
+│   │       │   └── http/
+│   │       │       ├── handler/                 # HTTP handlers
+│   │       │       │   └── user.go
+│   │       │       ├── router/                  # Domain route registration
+│   │       │       │   └── user.go
+│   │       │       └── dto/                     # HTTP request/response DTOs
+│   │       │           └── user.go
+│   │       └── repository/                      # Database implementation
+│   │           ├── user.go
+│   │           └── user_model.go
+│   ├── shared/                                  # Shared infrastructure
+│   │   └── adapter/
+│   │       └── delivery/
+│   │           ├── server.go                    # HTTP server assembly
+│   │           └── http/
+│   │               ├── router/
+│   │               │   └── router.go            # Central route registration
+│   │               └── middleware/
+│   │                   └── error_handler.go     # Unified error handling
+│   └── di/                                      # Dependency injection (Wire)
+│       ├── wire.go
+│       └── wire_gen.go
+└── pkg/                                         # Shared libraries
+    ├── auth/                                    # JWT token service
+    ├── config/                                  # Configuration loading
+    ├── crypto/                                  # Password hashing
+    ├── db/                                      # Database connection
+    ├── log/                                     # Structured logging
+    └── utils/                                   # AppError and utilities
 ```
 
-## Layer Guidelines
+## Adding a New Domain Module
 
-### 1. Domain Layer (`internal/domain/`)
+To add a new domain module (e.g., `article`):
 
-**✅ Should Contain:**
-- Core business entities (Structs representing business objects).
-- Value Objects.
-- Domain Service interfaces.
-- Enums and constants related to the domain.
+1. **Create the domain entity**: `internal/article/domain/article.go`
+2. **Define use case ports**: `internal/article/usecase/interfaces.go`
+3. **Implement the manager**: `internal/article/usecase/article.go`
+4. **Create use case DTOs**: `internal/article/usecase/dto/article.go`
+5. **Implement the repository**: `internal/article/adapter/repository/article.go`
+6. **Create HTTP handler**: `internal/article/adapter/delivery/http/handler/article.go`
+7. **Register routes**: `internal/article/adapter/delivery/http/router/article.go`
+8. **Register in central router**: Add `RegisterArticleRoutes` call to `internal/shared/adapter/delivery/http/router/router.go`
+9. **Wire DI**: Add providers to `internal/di/wire.go` sets and regenerate with `make di`
 
-**❌ Should NOT Contain:**
-- HTTP request/response structs.
-- Application-level concepts like pagination or API-specific data.
-- Infrastructure details like JSON tags or database-specific annotations (GORM tags are an exception for simplicity in this template, but in a stricter setup, they could be moved to repository-specific models).
+## AI-Assisted Development (Cursor)
 
-**Example:**
-```go
-// A core entity
-type User struct {
-    ID           uint
-    Username     string
-    Email        string
-    Password     string // Hashed password
-    CreatedAt    time.Time
-}
+This project is deeply integrated with Cursor AI workflows. Skills, Subagents, and Rules enable fully automated development from requirements to production-ready code.
 
-// A value object
-type UserStatus string
+### `/go` — End-to-End Development (Recommended)
 
-const (
-    StatusActive   UserStatus = "active"
-    StatusInactive UserStatus = "inactive"
-)
+Type `/go` followed by a requirement description in Cursor, and AI will complete the full development lifecycle automatically:
+
+```
+/go Add an Article domain module with CRUD operations and pagination
 ```
 
-### 2. Use Case Layer (`internal/usecase/`)
+The 5 automated stages:
 
-**✅ Should Contain:**
-- Implementations of specific business use cases (e.g., `CreateUser`, `LoginUser`).
-- Interface definitions for dependencies (e.g., `UserRepository`).
-- Request and Response DTOs (Data Transfer Objects).
-- Application-specific models and logic.
-
-**Example Directory Structure:**
 ```
-usecase/
-├── iface/
-│   └── repository.go      # Repository interfaces
-└── user/
-    └── service.go         # User use case implementation
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ 1. Require-  │───▶│ 2. Design &  │───▶│ 3. Code      │───▶│ 4. Code      │───▶│ 5. Code      │
+│    ments     │    │    Planning  │    │ Implementa-  │    │    Review    │    │ Simplifi-    │
+│ brainstorming│    │writing-plans │    │executing-plans│    │code-reviewer │    │code-simplifier│
+│ ⬆ Only human │    │  Automatic   │    │  Automatic   │    │  Automatic   │    │  Automatic   │
+│  interaction │    │              │    │              │    │              │    │              │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
-**Example DTOs:**
-```go
-// Request DTO for creating a user
-type CreateUserRequest struct {
-    Username string `json:"username" validate:"required"`
-    Email    string `json:"email" validate:"required,email"`
-    Password string `json:"password" validate:"required"`
-}
+- **Only step 1** requires human confirmation; steps 2-5 run fully automatically
+- Each step includes build verification (`go build`, `go vet`)
+- Issues found during review are auto-fixed and re-verified
 
-// Response DTO for a user profile
-type UserResponse struct {
-    ID       uint   `json:"id"`
-    Username string `json:"username"`
-    Email    string `json:"email"`
-}
+### Skills
+
+Skills are reusable AI workflow instructions located in `.cursor/skills/`:
+
+| Category | Skill | Purpose | Trigger |
+|----------|-------|---------|---------|
+| **Flow** | `go` | End-to-end automated development (recommended) | `/go` + description |
+| **Flow** | `brainstorming` | Requirements exploration, outputs design spec | Auto-triggered before feature creation |
+| **Planning** | `writing-plans` | Write step-by-step implementation plans (with TDD) | Multi-step tasks with specs |
+| **Execution** | `executing-plans` | Execute plans in batches with checkpoints | Separate session plan execution |
+| **Execution** | `subagent-driven-development` | Subagent-driven, one agent per task | Current session plan execution |
+| **Execution** | `dispatching-parallel-agents` | Dispatch multiple agents in parallel | 2+ independent tasks |
+| **Execution** | `test-driven-development` | TDD-driven development | New features, bug fixes |
+| **Review** | `code-review-expert` | SOLID / security / architecture review | Review git changes |
+
+### Subagents
+
+Subagents are specialized agents automatically dispatched during the `/go` pipeline:
+
+| Agent | Purpose | When Dispatched |
+|-------|---------|-----------------|
+| `code-reviewer` | Review code changes, detect SOLID violations and security risks | `/go` step 4 (automatic) |
+| `code-simplifier` | Simplify code, reduce complexity while preserving behavior | `/go` step 5 (automatic) |
+
+### Rules
+
+Rules provide persistent project-level coding standards for AI, located in `.cursor/rules/`:
+
+| Rule | Scope | Description |
+|------|-------|-------------|
+| `00-project-overview` | Global | Project architecture, tech stack, directory structure |
+| `01-code-style` | Global | Naming, error handling, logging, Context passing |
+| `02-best-practices` | `**/*.go` | Security, performance, config management, dev workflow |
+| `10-domain-layer` | `**/domain/*.go` | Domain entity definitions, status types |
+| `11-usecase-layer` | `**/usecase/**/*.go` | UseCase Manager, interfaces, DTO conventions |
+| `12-handler-layer` | `**/delivery/http/**/*.go` | HTTP Handler flow, error delegation |
+| `13-repository-layer` | `**/repository/*.go` | GORM models, data operations, model mapping |
+| `14-gateway-layer` | `**/gateway/**/*.go` | External service gateway conventions |
+| `15-task-layer` | `**/delivery/task/*.go` | Background task conventions |
+| `20-wire-di` | `**/di/*.go` | Wire dependency injection organization |
+| `30-testing` | `**/*_test.go` | TDD workflow, table-driven tests, mocking |
+| `40-api-swagger` | handler files | Swagger annotation conventions |
+| `session-continuation` | Global | Session continuation with next-step suggestions |
+
+### Step-by-Step Usage
+
+If you prefer not to use `/go`, you can trigger individual skills:
+
 ```
+# Explore requirements first
+/brainstorming I want to add a tag management module
 
-### 3. Adapter Layer (`internal/adapter/`)
+# After design is confirmed, generate implementation plan
+/writing-plans Create an implementation plan based on the confirmed design
 
-**✅ Should Contain:**
-- HTTP/gRPC handlers that translate requests into use case calls.
-- Database repository implementations that fulfill the interfaces defined in the Use Case layer.
-- Clients for external services (gateways).
-- Any other infrastructure-related code.
+# Execute the plan
+/executing-plans Execute docs/plans/2026-04-07-tag-module.md
 
-**Dependency Principle:**
-```
-Delivery -> UseCase -> Domain
-Gateway  -> UseCase
-Repository -> UseCase
+# Review after completion
+/code-review-expert Review the current git changes
 ```
 
 ## Getting Started
@@ -221,20 +262,18 @@ Repository -> UseCase
 
 ### Installation
 
-1.  **Clone the repository:**
+1. **Clone the repository:**
     ```sh
     git clone https://github.com/your-username/go-clean-arch.git
     cd go-clean-arch
     ```
 
-2.  **Set up environment variables:**
-    Create a `.env` file from the sample and fill in your configuration.
+2. **Set up environment variables:**
     ```sh
     cp .env.sample .env
     ```
 
-3.  **Install development tools and dependencies:**
-    This command will install all the necessary Go tools (linter, DI tool, etc.) and download the module dependencies.
+3. **Install development tools and dependencies:**
     ```sh
     make init
     make dep
@@ -242,43 +281,29 @@ Repository -> UseCase
 
 ## Development Workflow
 
-This project uses a `Makefile` to streamline common development tasks. Here are some of the most important commands:
-
--   **`make di`**: Generates the dependency injection code using `wire`. Run this whenever you add or change dependencies in `internal/di/wire.go`.
-
--   **`make doc`**: Generates Swagger API documentation.
-
--   **`make lint`**: Runs the linter (`golangci-lint`) to check for code quality and style issues.
-
--   **`make fmt`**: Formats the entire codebase using `gofumpt` and `golines`.
-
--   **`make test`**: Runs all unit tests and generates a coverage report (`.coverage.cov`).
-
--   **`make cov`**: Opens the HTML coverage report in your browser.
-
--   **`make build`**: Compiles the application and places the binary in the `bin/` directory.
+| Command | Description |
+|---------|-------------|
+| `make build` | Build the application |
+| `make serve` | Build and start the server |
+| `make di` | Generate Wire dependency injection code |
+| `make doc` | Generate Swagger API documentation |
+| `make lint` | Run linter (golangci-lint) |
+| `make test` | Run tests with coverage |
+| `make fmt` | Format code (gofumpt + golines) |
+| `make mock` | Generate mocks (mockgen) |
 
 ### Running the Application
 
-You can run the application either using Docker or locally.
-
-- **With Docker (Recommended for production-like environment):**
+- **With Docker:**
   ```sh
   docker-compose up --build
   ```
-  The API will be available at `http://localhost:8000`.
 
-- **Locally (Ideal for development):**
-  1.  Ensure you have a running PostgreSQL instance that matches your `.env` configuration.
-  2.  Run the application directly:
-      ```sh
-      go run ./cmd/api/main.go
-      ```
-  3.  Alternatively, you can build and serve:
-      ```sh
-      make build
-      make serve
-      ```
+- **Locally:**
+  ```sh
+  go run ./cmd/api/main.go
+  ```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,0 +1,99 @@
+---
+description: Go Clean Architecture Template project overview - DDD + Clean Architecture template
+alwaysApply: true
+---
+
+# Go Clean Architecture Template — Project Overview
+
+## Tech Stack
+
+| Category | Technology |
+| :--- | :--- |
+| Language | Go 1.21+ |
+| Web Framework | Gin |
+| Database | PostgreSQL (GORM) |
+| Dependency Injection | Google Wire |
+| API Docs | Swagger/OpenAPI |
+| Logging | slog (JSON format) |
+| Password Hashing | bcrypt |
+| Authentication | JWT |
+
+## Architecture Principles
+
+Uses **DDD + Clean Architecture** design. Core rule: **dependencies only point inward**.
+
+```
+External World (HTTP, DB, External APIs)
+         ↓
+Adapter Layer (Delivery, Repository, Gateway)
+         ↓
+UseCase Layer (Business logic orchestration, interface definitions)
+         ↓
+Domain Layer (Core entities, business rules)
+```
+
+## Domain Modules
+
+| Domain | Directory | Responsibility |
+| :--- | :--- | :--- |
+| User | `internal/user/` | User registration, login, authentication |
+
+> When adding new domain modules, follow the same pattern under `internal/{domain}/`.
+
+## Directory Structure
+
+Each domain module follows a unified structure:
+
+```
+{domain}/
+├── domain/           # Domain layer: core entities and business rules
+│   └── {domain}.go
+├── usecase/          # UseCase layer: business logic orchestration
+│   ├── {domain}.go   # {Domain}Manager implementation
+│   ├── interfaces.go # Port interface definitions (Repository/Gateway)
+│   ├── dto/          # UseCase-level DTOs
+│   └── mock/         # mockgen-generated mocks
+└── adapter/          # Adapter layer: external interface implementations
+    ├── delivery/http/
+    │   ├── handler/  # HTTP handlers
+    │   ├── router/   # Route registration
+    │   └── dto/      # HTTP-level DTOs
+    └── repository/   # Data persistence
+```
+
+## Shared Components
+
+| Module | Directory | Responsibility |
+| :--- | :--- | :--- |
+| Server | `internal/shared/adapter/delivery/` | HTTP server assembly and startup |
+| Router | `internal/shared/adapter/delivery/http/router/` | Central route registration |
+| Middleware | `internal/shared/adapter/delivery/http/middleware/` | ErrorHandler and other middleware |
+| DI | `internal/di/` | Wire dependency injection config |
+
+## Shared Libraries
+
+| Module | Directory | Responsibility |
+| :--- | :--- | :--- |
+| config | `pkg/config/` | Configuration loading (Viper) |
+| db | `pkg/db/` | Database connection (GORM + Postgres) |
+| auth | `pkg/auth/` | JWT token service |
+| crypto | `pkg/crypto/` | Password hashing |
+| log | `pkg/log/` | Structured logging (slog) |
+| utils | `pkg/utils/` | AppError unified error handling |
+
+## Feature Development Order
+
+Domain → UseCase → Repository/Gateway → Handler → Router → Swagger → Tests → Wire DI
+
+## Common Commands
+
+```bash
+make build   # Build
+make serve   # Start server
+make di      # Generate dependency injection code
+make doc     # Generate Swagger docs
+make lint    # Run linter
+make test    # Run tests
+make fmt     # Format code
+make mock    # Generate mocks
+```

@@ -1,0 +1,86 @@
+---
+description: Gateway layer development standards - HTTP/gRPC client wrappers, external service integration
+globs: "**/gateway/**/*.go"
+alwaysApply: false
+---
+
+# Gateway Layer Development Standards
+
+The Gateway layer communicates with external services. It belongs to the Adapter layer and implements interfaces defined in the UseCase layer.
+
+## Gateway Struct
+
+```go
+// PaymentGateway is the payment service gateway.
+type PaymentGateway struct {
+    baseURL    string
+    httpClient *http.Client
+}
+
+// NewPaymentGateway creates a new PaymentGateway.
+func NewPaymentGateway(cfg config.Config) *PaymentGateway {
+    return &PaymentGateway{
+        baseURL:    cfg.PaymentServiceURL,
+        httpClient: &http.Client{Timeout: 10 * time.Second},
+    }
+}
+```
+
+**Naming conventions**:
+- Struct: `{Service}Gateway`
+- Constructor: `New{Service}Gateway`
+
+## Method Implementation
+
+```go
+// ProcessPayment processes a payment.
+func (g *PaymentGateway) ProcessPayment(ctx context.Context, orderID string, amount int) error {
+    body, _ := json.Marshal(map[string]any{
+        "order_id": orderID,
+        "amount":   amount,
+    })
+
+    req, err := http.NewRequestWithContext(ctx, "POST", g.baseURL+"/api/payments", bytes.NewReader(body))
+    if err != nil {
+        return fmt.Errorf("failed to create request: %w", err)
+    }
+    req.Header.Set("Content-Type", "application/json")
+
+    resp, err := g.httpClient.Do(req)
+    if err != nil {
+        return fmt.Errorf("failed to call payment service: %w", err)
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return fmt.Errorf("payment service returned status %d", resp.StatusCode)
+    }
+
+    return nil
+}
+```
+
+## Define Interface in UseCase Layer
+
+```go
+// interfaces.go
+type PaymentGateway interface {
+    ProcessPayment(ctx context.Context, orderID string, amount int) error
+}
+```
+
+## Wire Binding
+
+```go
+// wire.go
+wire.Bind(new(usecase.PaymentGateway), new(*gateway.PaymentGateway)),
+```
+
+## Key Rules
+
+- Naming: `{Service}Gateway`
+- Constructor takes `config.Config`
+- Use `fmt.Errorf("...%w", err)` to wrap errors
+- Convert external DTOs to domain models before returning
+- Use `context.Context` to pass timeout and cancellation signals
+- Gateways live in `internal/shared/gateway/` or the domain module's `adapter/gateway/`

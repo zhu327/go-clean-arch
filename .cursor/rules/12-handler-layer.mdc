@@ -1,0 +1,142 @@
+---
+description: HTTP Handler development standards - request handling, DTO definitions, error delegation
+globs: "**/delivery/http/**/*.go"
+alwaysApply: false
+---
+
+# HTTP Handler Development Standards
+
+The Handler layer processes HTTP requests and belongs to the Adapter layer's delivery component.
+
+## Handler Struct
+
+```go
+// UserHandler is the HTTP handler for user operations.
+type UserHandler struct {
+    userManager *usecase.UserManager
+}
+
+// NewUserHandler creates a new UserHandler.
+func NewUserHandler(userManager *usecase.UserManager) *UserHandler {
+    return &UserHandler{userManager: userManager}
+}
+```
+
+**Key rules**:
+- Naming: `{Domain}Handler`
+- Dependency: concrete `*usecase.{Domain}Manager` (not an interface)
+- Constructor: `New{Domain}Handler`
+
+## Standard Processing Flow
+
+```go
+// SignUp handles user registration.
+// @Summary User registration
+// @Tags Auth
+// @Param input body dto.SignUpRequest true "Registration info"
+// @Router /api/auth/signup [post]
+// @Success 201 {object} dto.UserResponse
+// @Failure 400 {object} utils.AppError
+// @Failure 409 {object} utils.AppError
+func (h *UserHandler) SignUp(c *gin.Context) {
+    // 1. Bind request parameters
+    var req dto.SignUpRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.Error(utils.BadRequestError(err.Error()))
+        return
+    }
+
+    // 2. Call UseCase (convert HTTP DTO → UseCase DTO)
+    user, err := h.userManager.SignUp(c.Request.Context(), ucdto.SignUpParams{
+        Username: req.Username,
+        Email:    req.Email,
+        Password: req.Password,
+    })
+    if err != nil {
+        // 3. Delegate error to ErrorHandler middleware
+        c.Error(err)
+        return
+    }
+
+    // 4. Convert and return response (HTTP DTO)
+    c.JSON(http.StatusCreated, dto.UserResponse{
+        ID:       user.ID,
+        Username: user.Username,
+        Email:    user.Email,
+    })
+}
+```
+
+## Error Handling Pattern
+
+**Use `c.Error()` to delegate to ErrorHandler middleware** — never manually construct error responses in the handler:
+
+```go
+// Correct - delegate to ErrorHandler middleware
+c.Error(utils.BadRequestError("invalid input"))
+return
+
+c.Error(err) // *AppError from UseCase is automatically handled by middleware
+return
+
+// Wrong - manually constructing error response
+c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+```
+
+## Request DTOs (adapter/delivery/http/dto/)
+
+```go
+// SignUpRequest is the registration request.
+type SignUpRequest struct {
+    Username string `json:"username" binding:"required,min=3,max=15"`
+    Email    string `json:"email" binding:"required,email"`
+    Password string `json:"password" binding:"required,min=5,max=25"`
+}
+
+// LoginRequest is the login request.
+type LoginRequest struct {
+    Email    string `json:"email" binding:"required,email"`
+    Password string `json:"password" binding:"required,min=5,max=25"`
+}
+```
+
+**Tag usage**:
+- Query parameters: `form:"field_name"`
+- JSON body: `json:"field_name"`
+- Validation: `binding:"required"`, `binding:"min=1,max=100"`
+
+## Response DTOs
+
+```go
+// UserResponse is the user response (no sensitive data).
+type UserResponse struct {
+    ID       uint   `json:"id"`
+    Username string `json:"username"`
+    Email    string `json:"email"`
+}
+```
+
+## Route Registration (router/)
+
+```go
+// RegisterUserRoutes registers all user-related routes.
+func RegisterUserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler) {
+    auth := api.Group("/auth")
+    {
+        auth.POST("/login", userHandler.Login)
+        auth.POST("/signup", userHandler.SignUp)
+    }
+
+    user := api.Group("/user")
+    {
+        user.GET("/me", userHandler.Me)
+    }
+}
+```
+
+## Prohibited
+
+- No business logic in handlers
+- No direct repository calls
+- No manually constructed error JSON responses (use `c.Error()`)
+- No sensitive fields (e.g., password) in responses

@@ -4,33 +4,34 @@
 package di
 
 import (
-	"go-clean-arch/internal/adapter/delivery/http"
-	"go-clean-arch/internal/adapter/delivery/http/handler"
-	"go-clean-arch/internal/adapter/repository"
-	"go-clean-arch/internal/usecase/user"
+	delivery "go-clean-arch/internal/shared/adapter/delivery"
+	userHandler "go-clean-arch/internal/user/adapter/delivery/http/handler"
+	userRouter "go-clean-arch/internal/user/adapter/delivery/http/router"
+	userRepo "go-clean-arch/internal/user/adapter/repository"
+	userUsecase "go-clean-arch/internal/user/usecase"
 	"go-clean-arch/pkg/auth"
 	"go-clean-arch/pkg/config"
+	"go-clean-arch/pkg/crypto"
 	"go-clean-arch/pkg/db"
 
 	"github.com/google/wire"
 )
 
-func InitailizeApi(config config.Config) (*http.ServerHTTP, error) {
+func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	wire.Build(
 		db.ConnectDatabase,
 		auth.NewTokenService,
-		// repository
-		repository.NewUserRepository,
-
-		// usecases
-		user.NewUserUseCase,
-
-		// handlers
-		handler.NewUserHandler,
-
-		// http server
-		http.NewServerHTTP,
+		crypto.NewBcryptHasher,
+		wire.Bind(new(userUsecase.PasswordHasher), new(*crypto.BcryptHasher)),
+		userRepo.NewUserRepository,
+		wire.Bind(new(userUsecase.UserRepository), new(*userRepo.UserRepository)),
+		provideTokenTTLs,
+		userUsecase.NewUserManager,
+		wire.Bind(new(userHandler.UserUseCase), new(*userUsecase.UserManager)),
+		userHandler.NewUserHandler,
+		userRouter.NewUserRegistrar,
+		provideRegistrars,
+		delivery.NewServer,
 	)
-
-	return &http.ServerHTTP{}, nil
+	return &delivery.Server{}, nil
 }

@@ -1,0 +1,120 @@
+---
+description: Repository layer development standards - GORM model definitions, data operations
+globs: "**/repository/*.go"
+alwaysApply: false
+---
+
+# Repository Layer Development Standards
+
+The Repository layer handles data persistence. It belongs to the Adapter layer and implements interfaces defined in the UseCase layer.
+
+## GORM Model Definition
+
+```go
+// UserModel is the GORM database model, separated from domain.User.
+type UserModel struct {
+    gorm.Model
+    Username string `gorm:"not null;unique"`
+    Email    string `gorm:"unique;not null"`
+    Password string
+}
+
+// TableName specifies the GORM table name.
+func (UserModel) TableName() string {
+    return "users"
+}
+```
+
+**GORM tag reference**:
+- `not null` — non-nullable
+- `unique` / `uniqueIndex` — unique constraint
+- `index` — index
+- `column:xxx` — custom column name (when field name differs)
+
+## Repository Struct
+
+```go
+// UserRepository implements user data persistence.
+type UserRepository struct {
+    db *gorm.DB
+}
+
+// NewUserRepository creates a new UserRepository.
+func NewUserRepository(db *gorm.DB) *UserRepository {
+    return &UserRepository{db: db}
+}
+```
+
+**Naming conventions**:
+- Struct: `{Entity}Repository`
+- Constructor: `New{Entity}Repository`
+- Returns concrete type (`*UserRepository`); bound to interface via Wire Bind
+
+## Data Operations
+
+```go
+// Create creates a new record.
+func (r *UserRepository) Create(ctx context.Context, user domain.User) (domain.User, error) {
+    userModel := fromDomain(user)
+    if err := r.db.WithContext(ctx).Create(userModel).Error; err != nil {
+        return domain.User{}, err
+    }
+    return *userModel.toDomain(), nil
+}
+
+// FindByID queries by ID.
+func (r *UserRepository) FindByID(ctx context.Context, id uint) (domain.User, error) {
+    return r.findOne(ctx, "id = ?", id)
+}
+
+// FindByEmail queries by email.
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+    return r.findOne(ctx, "email = ?", email)
+}
+
+// findOne is a generic single-record query helper.
+func (r *UserRepository) findOne(ctx context.Context, where string, arg any) (domain.User, error) {
+    var userModel UserModel
+    if err := r.db.WithContext(ctx).Where(where, arg).First(&userModel).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return domain.User{}, usecase.ErrUserNotFound
+        }
+        return domain.User{}, err
+    }
+    return *userModel.toDomain(), nil
+}
+```
+
+## Model Mapping
+
+```go
+// toDomain converts the database model to a domain entity.
+func (m *UserModel) toDomain() *domain.User {
+    return &domain.User{
+        ID:        m.ID,
+        Username:  m.Username,
+        Email:     m.Email,
+        Password:  m.Password,
+        CreatedAt: m.CreatedAt,
+        UpdatedAt: m.UpdatedAt,
+    }
+}
+
+// fromDomain creates a database model from a domain entity.
+func fromDomain(u domain.User) *UserModel {
+    return &UserModel{
+        Model:    gorm.Model{ID: u.ID, CreatedAt: u.CreatedAt, UpdatedAt: u.UpdatedAt},
+        Username: u.Username,
+        Email:    u.Email,
+        Password: u.Password,
+    }
+}
+```
+
+## Key Rules
+
+- Always use `r.db.WithContext(ctx)` to pass context
+- Use transactions for multi-table operations
+- Handle `gorm.ErrRecordNotFound` correctly — return domain-level sentinel errors
+- Separate models from domain objects; convert via methods
+- Extract common query logic into private methods (e.g., `findOne`)
