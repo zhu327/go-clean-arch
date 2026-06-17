@@ -13,7 +13,7 @@ Write E2E tests that hit real HTTP endpoints backed by Testcontainers (MongoDB +
 - New API endpoint needs E2E coverage
 - Existing endpoint lacks E2E tests
 - Bug fix requires E2E regression test
-- `/go` pipeline (added automatically after unit tests pass)
+- Planned as a task in `writing-plans` / `/go` (executed by `subagent-driven-development`, not a separate post-implementation gate)
 
 ## Quick Reference
 
@@ -251,6 +251,6 @@ If the service SDK doesn't support standard host configuration:
 ## Integration with Other Skills
 
 - `test-driven-development` — E2E tests complement unit tests, not replace them
-- `go` — E2E validation runs as part of the pipeline (Step 3.5)
-- `writing-plans` — Plans should include E2E test tasks for new API endpoints
-- `subagent-driven-development` — E2E tests can be a separate task in a plan
+- `go` — E2E tests are planned as tasks in Step 2 (Planning) and executed in Step 3 (Execute); there is no separate E2E gate
+- `writing-plans` — Plans MUST include E2E test tasks for new API endpoints (as vertical-slice tasks, not an after-the-fact gate)
+- `subagent-driven-development` — E2E tests run as tasks in the plan, with the same spec-review gate as any other task

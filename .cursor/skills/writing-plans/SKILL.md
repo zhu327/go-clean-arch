@@ -1,15 +1,17 @@
 ---
 name: writing-plans
-description: Write comprehensive implementation plans with vertical slices, dependency graphs, TDD steps, and exact file paths. Use when you have a spec or requirements for a multi-step task, before touching code. Produces plans executable by subagent-driven-development or executing-plans.
+description: Write implementation plans with vertical slices, dependency graphs, interface contracts, and test-case descriptions. Use when you have a spec or requirements for a multi-step task, before touching code. The plan defines the skeleton (contracts + verification) and leaves implementation to the TDD implementer. Produces plans executable by subagent-driven-development.
 ---
 
 # Writing Plans
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD.
+Write implementation plans that define the **skeleton** of the work: which files to touch for each task, the interface contracts to create, the test cases that must pass, and how to verify the result. Give the implementer the whole plan as bite-sized vertical-slice tasks. DRY. YAGNI. TDD.
 
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+The plan describes **what** to build (contracts, file paths, dependencies) and **how it is verified** (acceptance criteria, test cases). It does NOT write the implementation code — that is the implementer's job, done test-first. Writing code in the plan wastes context and forces the implementer to regenerate (and often silently diverge from) the same code.
+
+Assume the implementer is a skilled developer who knows almost nothing about our toolset or problem domain, and needs explicit contracts and test scenarios to work autonomously.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
@@ -59,12 +61,11 @@ Ask the user:
 
 Expand each approved slice into the full Task Structure (see below) and save the plan document.
 
-## Task & Step Granularity
+## Task Granularity
 
 - **A Task** represents one Vertical Slice — a complete end-to-end feature path (typically 30-60 minutes).
-- **A Step** represents a tiny TDD cycle within that slice (2-5 minutes each).
 
-Because a Vertical Slice touches multiple layers, a single Task MUST contain multiple TDD steps organized by layer (e.g., Step 1-4 for Repository layer, Step 5-8 for UseCase layer, Step 9-12 for HTTP Handler layer).
+Because a Vertical Slice touches multiple layers, a single Task MUST list the interface contracts and test cases for each layer it touches (e.g., Repository, UseCase, Handler). The plan defines WHAT to build (contracts) and HOW it is verified (acceptance criteria + test cases); it does NOT write the implementation code. The implementer applies TDD per test case (red-green-refactor) — that discipline lives in the `implementer-prompt`, so do not repeat it as numbered steps in every task.
 
 ## Plan Document Header
 
@@ -73,7 +74,7 @@ Because a Vertical Slice touches multiple layers, a single Task MUST contain mul
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For Cursor:** Execute this plan using `executing-plans` (separate session with checkpoints) or `subagent-driven-development` (current session with subagents).
+> **For Cursor:** Execute this plan using `subagent-driven-development` (wave-parallel subagents in the current session).
 
 **Goal:** [One sentence describing what this builds]
 
@@ -111,6 +112,8 @@ Task 3 (HITL) ───── Task 5 (AFK)
 **Blocked by:** Task X, Task Y / None - can start immediately
 **Layers touched:** Domain, UseCase, Repository, Handler
 
+**Goal:** [One or two sentences: what this slice delivers end-to-end and why]
+
 **Acceptance Criteria:**
 - [ ] Criterion 1 (functional behavior from user perspective)
 - [ ] Criterion 2 (edge case or boundary condition)
@@ -128,189 +131,115 @@ Task 3 (HITL) ───── Task 5 (AFK)
 
 ---
 
-#### Layer 1: Repository / DB
+#### Interface Contracts
 
-**Step 1: Write the failing Repository test**
+Define the contracts the implementer must create — interfaces, struct shapes, and function signatures. These are the skeleton; the implementer writes the bodies via TDD. List only what this task introduces or changes. If a contract already exists in another module, reference its file path instead of redefining it.
 
-```go
-func TestRepo_Create(t *testing.T) {
-    // Arrange: set up test DB / container
-    repo := NewRepository(testDB)
-
-    // Act
-    err := repo.Create(context.Background(), &Entity{Name: "test"})
-
-    // Assert
-    assert.NoError(t, err)
-}
-```
-
-**Step 2: Run test to verify it fails**
-
-Run: `go test -v ./internal/{domain}/adapter/repository/... -run TestRepo_Create`
-Expected: FAIL with "undefined: NewRepository"
-
-**Step 3: Write minimal Repository implementation**
-
-```go
-// Repository 实体仓储
-type Repository struct {
-    db *gorm.DB
+\```go
+// domain/entity.go
+type Entity struct {
+    ID   string
+    Name string
+    // ...fields with intent, not boilerplate
 }
 
-// NewRepository 创建仓储实例
-func NewRepository(db *gorm.DB) *Repository {
-    return &Repository{db: db}
+// usecase/interfaces.go
+type Repository interface {
+    Create(ctx context.Context, entity *domain.Entity) error
 }
 
-// Create 持久化实体
-func (r *Repository) Create(ctx context.Context, entity *Entity) error {
-    return r.db.WithContext(ctx).Create(entity).Error
+type Manager interface {
+    Create(ctx context.Context, entity *domain.Entity) error
 }
-```
 
-**Step 4: Run test to verify it passes**
+// adapter/repository/repo.go
+func NewRepository(db *gorm.DB) *Repository
 
-Run: `go test -v ./internal/{domain}/adapter/repository/... -run TestRepo_Create`
-Expected: PASS
+// adapter/delivery/http/handler/handler.go
+func NewHandler(manager Manager) *Handler
+func (h *Handler) Create(c *gin.Context)
+\```
+
+> Signatures only. No method bodies, no test code. These contracts are what downstream tasks (and the spec reviewer) will check against.
+
+#### Test Cases to Cover
+
+Describe the scenarios the tests must verify — behavior and expected outcomes, not full test code. The implementer writes each test BEFORE its implementation (TDD). Organize by layer.
+
+**Repository layer:**
+- Create succeeds and persists the entity (verify via re-query or a test DB/container)
+- Create returns the DB error transparently on failure
+
+**UseCase layer:**
+- Create delegates to the Repository and returns its error
+- Create validates input (e.g., rejects empty Name) before calling the Repository
+
+**HTTP Handler layer:**
+- POST returns 200 with the created resource on valid input
+- POST returns 400 on missing/invalid required fields
+- Handler delegates to Manager and maps errors to the right response codes
+
+#### Layer Guidance
+
+Brief notes on each layer's responsibility in this slice, so the implementer understands intent without being handed the code:
+
+- **Domain:** define the `Entity` and any invariants
+- **Repository:** persist via GORM; follow existing repo patterns in this module
+- **UseCase:** orchestrate, validate input, own business rules; depend on the `Repository` interface (mocked in tests)
+- **Handler:** bind request, call Manager, format response; register the route in the router; wire into DI
 
 ---
 
-#### Layer 2: UseCase
+#### Validation
 
-**Step 5: Write the failing UseCase test (mocking Repository)**
+Run after the slice is implemented:
 
-```go
-func TestManager_Create(t *testing.T) {
-    ctrl := gomock.NewController(t)
-    defer ctrl.Finish()
+\```bash
+go build ./...
+go test ./internal/{domain}/...
+go vet ./{domain}/...
+\```
 
-    mockRepo := mock.NewMockRepository(ctrl)
-    mockRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
-    manager := NewManager(mockRepo)
-
-    err := manager.Create(context.Background(), &Entity{Name: "test"})
-    assert.NoError(t, err)
-}
+If this slice adds/modifies API endpoints, an E2E test task (see below) must also pass: `make e2e`.
 ```
 
-**Step 6: Run test to verify it fails**
+### E2E Test Tasks
 
-Run: `go test -v ./internal/{domain}/usecase/... -run TestManager_Create`
-Expected: FAIL with "undefined: NewManager"
+If the feature adds or modifies API endpoints, the plan MUST include one or more E2E test tasks (do NOT treat E2E as a separate gate that runs after the whole feature — it is a task in the plan, executed by the same subagent-driven-development flow). Each E2E task:
 
-**Step 7: Write minimal UseCase implementation**
-
-```go
-// Manager 实体管理器
-type Manager struct {
-    repo Repository
-}
-
-// NewManager 创建管理器实例
-func NewManager(repo Repository) *Manager {
-    return &Manager{repo: repo}
-}
-
-// Create 创建实体
-func (m *Manager) Create(ctx context.Context, entity *Entity) error {
-    return m.repo.Create(ctx, entity)
-}
-```
-
-**Step 8: Run test to verify it passes**
-
-Run: `go test -v ./internal/{domain}/usecase/... -run TestManager_Create`
-Expected: PASS
-
----
-
-#### Layer 3: HTTP Handler & Route
-
-**Step 9: Write the failing Handler test**
-
-```go
-func TestHandler_Create(t *testing.T) {
-    ctrl := gomock.NewController(t)
-    defer ctrl.Finish()
-
-    mockManager := mock.NewMockManager(ctrl)
-    mockManager.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
-    handler := NewHandler(mockManager)
-
-    w := httptest.NewRecorder()
-    c, _ := gin.CreateTestContext(w)
-    c.Request = httptest.NewRequest("POST", "/api/v1/entities", strings.NewReader(`{"name":"test"}`))
-
-    handler.Create(c)
-    assert.Equal(t, http.StatusOK, w.Code)
-}
-```
-
-**Step 10: Implement Handler, register Route, wire DI**
-
-```go
-// Handler HTTP 处理器
-type Handler struct {
-    manager Manager
-}
-
-func NewHandler(manager Manager) *Handler {
-    return &Handler{manager: manager}
-}
-
-func (h *Handler) Create(c *gin.Context) {
-    // parse, call manager, respond
-}
-```
-
-**Step 11: Run all tests for this slice**
-
-Run: `go test -v ./internal/{domain}/...`
-Expected: ALL PASS
-
-**Step 12: Lint & commit**
-
-```bash
-make fmt && make lint
-git add internal/{domain}/
-```
-```
+- Is typed AFK and blocked by the endpoint task(s) it covers
+- Lists the endpoints + scenarios to cover (use the `e2e-testing` skill for the methodology)
+- Has acceptance criteria like: `make e2e` passes (existing + new tests)
 
 ## Remember
 - Exact file paths always
-- Complete code in plan (not "add validation")
-- Exact commands with expected output
+- Interface contracts + test-case descriptions in the plan, NOT implementation code — define the skeleton, not the body; leave the code to the TDD implementer
+- Exact validation commands where relevant
 - Reference relevant skills with @ syntax
-- DRY, YAGNI, TDD
-- If the plan adds/modifies API endpoints, include E2E test tasks (use `e2e-testing` skill)
+- DRY, YAGNI, TDD (enforced by the implementer, not re-written as numbered steps per task)
+- If the plan adds/modifies API endpoints, it MUST include E2E test tasks (use `e2e-testing` skill) — E2E is a planned task, not a separate post-implementation gate
 - Vertical slices, not horizontal layers — each task must be independently verifiable
 - Declare dependencies explicitly — enable parallel execution where possible
 
 ## Execution Handoff
 
-After saving the plan, use `AskQuestion` to offer execution choice:
+After saving the plan, hand off to `subagent-driven-development` for execution in the current session:
 
-**If Subagent-Driven chosen:**
 - Read and follow `.cursor/skills/subagent-driven-development/SKILL.md`
-- Stay in this session
-- Fresh subagent per task + code review
-- Use dependency graph to parallelize independent AFK tasks
+- Fresh subagent per task, wave-parallel execution using the dependency graph
+- Spec-compliance review gate per task; global architecture/quality review at the end
 
-**If Parallel Session chosen:**
-- New session reads and follows `.cursor/skills/executing-plans/SKILL.md`
+Within the `/go` pipeline this handoff is automatic (no confirmation). When running `writing-plans` standalone, confirm with the user before starting execution:
 
 ```
 AskQuestion({
-  title: "执行方式选择",
+  title: "开始执行",
   questions: [{
-    id: "execution_approach",
-    prompt: "Plan saved to docs/plans/<filename>.md. How would you like to execute?",
+    id: "start_execution",
+    prompt: "Plan saved to docs/plans/<filename>.md. Start subagent-driven execution now?",
     options: [
-      { id: "subagent", label: "Subagent-Driven (this session) - Fresh subagent per task, fast iteration" },
-      { id: "parallel", label: "Parallel Session (separate) - Batch execution with checkpoints" }
+      { id: "yes", label: "Yes - execute now with subagent-driven-development" },
+      { id: "no", label: "Not yet - I'll review the plan first" }
     ]
   }]
 })

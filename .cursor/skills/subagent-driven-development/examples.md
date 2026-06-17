@@ -49,15 +49,6 @@ User: "ServiceNow"
   Agent B: Fixed
   Reviewer B (re-dispatch): ✅ Spec compliant now
 
-[Dispatch 3 code quality reviewers in ONE message:]
-  Quality A → Task 1: ✅ Approved
-  Quality B → Task 2: ✅ Approved
-  Quality C → Task 3: Important — extract constant
-
-[Fix Task 3: Resume Agent C]
-  Agent C: Fixed
-  Quality C (re-dispatch): ✅ Approved
-
 [Validate: go build ./... → ❌ FAIL]
   Error: internal/certificate/usecase/manager.go:15:
     cannot use repo (type *subdomain.Repository) as type certificate.CertificateRepository
@@ -86,8 +77,9 @@ User: "ServiceNow"
 
 ═══ Final Review ═══
 
-[Dispatch code-reviewer for entire implementation]
-Final reviewer: All requirements met, ready to merge
+[Dispatch code-reviewer for entire implementation — global architecture/quality pass]
+Final reviewer: Architecture and code quality look good; one code-judo simplification suggested.
+Ready to merge.
 
 Done! 5 tasks × 2 waves. Max 3 parallel agents. 
 1 integration fix in Wave 0 (auto-resolved).
@@ -101,10 +93,10 @@ Wave 0 has 7 AFK tasks (all independent, no file conflicts).
 Concurrency limit = 4.
 
 [Batch 1: Dispatch Tasks 1, 2, 3, 4 in parallel (4 agents)]
-[Batch 1 complete → run spec + quality reviews for Tasks 1-4]
+[Batch 1 complete → run spec reviews for Tasks 1-4]
 
 [Batch 2: Dispatch Tasks 5, 6, 7 in parallel (3 agents)]
-[Batch 2 complete → run spec + quality reviews for Tasks 5-7]
+[Batch 2 complete → run spec reviews for Tasks 5-7]
 
 [Run wave-level validation: go build, go test, go vet]
 [Mark all 7 tasks complete]

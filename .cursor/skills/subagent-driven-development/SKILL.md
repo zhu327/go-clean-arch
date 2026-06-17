@@ -6,39 +6,30 @@ disable-model-invocation: true
 
 # Subagent-Driven Development
 
-Execute plan by dispatching subagents per task with **dependency-aware parallel scheduling**. Tasks without mutual dependencies run concurrently in waves. Each task gets two-stage review (spec compliance then code quality).
+Execute plan by dispatching subagents per task with **dependency-aware parallel scheduling**. Tasks without mutual dependencies run concurrently in waves. Each task gets a spec-compliance review gate (does it build, do tests pass, does it meet the task's acceptance criteria). Architecture and code-quality are reviewed once, globally, after all waves — not per task.
 
-**Core principle:** Dependency graph drives parallelism. Fresh subagent per task. Two-stage review gates. Maximum concurrency within safety bounds.
+**Core principle:** Dependency graph drives parallelism. Fresh subagent per task. Spec-compliance review gate per task (functional correctness). Global quality review at the end. Maximum concurrency within safety bounds.
 
 ## When to Use
 
 ```dot
 digraph when_to_use {
     "Have implementation plan?" [shape=diamond];
-    "Plan has dependency graph?" [shape=diamond];
-    "Stay in this session?" [shape=diamond];
     "subagent-driven-development" [shape=box];
-    "executing-plans" [shape=box];
+    "dispatching-parallel-agents" [shape=box];
     "Manual execution or brainstorm first" [shape=box];
 
-    "Have implementation plan?" -> "Plan has dependency graph?" [label="yes"];
-    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
-    "Plan has dependency graph?" -> "Stay in this session?" [label="yes"];
-    "Plan has dependency graph?" -> "Stay in this session?" [label="no (treat all as sequential)"];
-    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
-    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+    "Have implementation plan?" -> "subagent-driven-development" [label="yes"];
+    "Have implementation plan?" -> "dispatching-parallel-agents" [label="no - but N independent ad-hoc problems"];
+    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no - single problem or unclear"];
 }
 ```
 
-**vs. Executing Plans (parallel session):**
-- Same session (no context switch)
-- Fresh subagent per task (no context pollution)
-- **Parallel waves** — independent tasks run concurrently
-- Two-stage review after each task: spec compliance first, then code quality
-- Faster iteration (no human-in-loop between AFK tasks)
+- **No dependency graph?** SDD falls back to sequential execution internally (see "Falling Back to Sequential") — a plan without a graph is still executable, just not parallelized.
+- **N independent bugs/issues, not a plan?** Use `dispatching-parallel-agents` instead.
 
 **vs. Dispatching Parallel Agents:**
-- This skill: **wave-parallel** execution of **planned** tasks with review gates
+- This skill: **wave-parallel** execution of **planned** tasks with a spec-review gate per task
 - Parallel Agents: **concurrent** execution of independent **ad-hoc** problems (bugs, investigations)
 - Use `dispatching-parallel-agents` when you have N independent bugs/issues, NOT a plan to execute
 
@@ -62,9 +53,6 @@ digraph process {
         "Dispatch ALL spec reviewers in parallel" [shape=box];
         "All spec reviews pass?" [shape=diamond];
         "Fix spec issues (per task: implementer fixes → re-review)" [shape=box];
-        "Dispatch ALL code quality reviewers in parallel" [shape=box];
-        "All quality reviews pass?" [shape=diamond];
-        "Fix quality issues (per task: implementer fixes → re-review)" [shape=box];
         "Run validation (go build, go test, go vet)" [shape=box];
         "Validation passes?" [shape=diamond];
         "Dispatch Integration Fixer subagent" [shape=box];
@@ -85,11 +73,7 @@ digraph process {
     "Dispatch ALL spec reviewers in parallel" -> "All spec reviews pass?";
     "All spec reviews pass?" -> "Fix spec issues (per task: implementer fixes → re-review)" [label="no"];
     "Fix spec issues (per task: implementer fixes → re-review)" -> "Dispatch ALL spec reviewers in parallel" [label="re-review failed tasks"];
-    "All spec reviews pass?" -> "Dispatch ALL code quality reviewers in parallel" [label="yes"];
-    "Dispatch ALL code quality reviewers in parallel" -> "All quality reviews pass?";
-    "All quality reviews pass?" -> "Fix quality issues (per task: implementer fixes → re-review)" [label="no"];
-    "Fix quality issues (per task: implementer fixes → re-review)" -> "Dispatch ALL code quality reviewers in parallel" [label="re-review failed tasks"];
-    "All quality reviews pass?" -> "Run validation (go build, go test, go vet)" [label="yes"];
+    "All spec reviews pass?" -> "Run validation (go build, go test, go vet)" [label="yes"];
     "Run validation (go build, go test, go vet)" -> "Validation passes?";
     "Validation passes?" -> "Mark all wave tasks complete" [label="yes"];
     "Validation passes?" -> "Dispatch Integration Fixer subagent" [label="no - integration issue"];
@@ -144,7 +128,7 @@ HITL tasks need human decisions before agent can proceed:
 1. Present the HITL task to the user with the decision needed
 2. Wait for user response
 3. Dispatch implementer subagent with the decision as additional context
-4. Run spec review + code quality review (sequential per HITL task)
+4. Run spec review (per HITL task)
 5. Mark complete
 
 ### Step 2: Dispatch AFK Implementers in Parallel
@@ -180,6 +164,8 @@ Task("Review spec compliance for Task 2")  // Reviewer B
 Task("Review spec compliance for Task 3")  // Reviewer C
 ```
 
+The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, in Phase 3. Use the `./spec-reviewer-prompt.md` template.
+
 ### Step 5: Fix Spec Issues
 
 For each task where spec review found issues:
@@ -188,17 +174,9 @@ For each task where spec review found issues:
 3. Repeat until ✅
 
 Fix loops are **per-task and serialized** (implementer must fix before re-review).
-Tasks that passed spec review can proceed to code quality review immediately.
+Tasks that pass spec review are ready for wave validation.
 
-### Step 6: Dispatch Code Quality Reviewers in Parallel
-
-Same pattern: dispatch all code quality reviewers simultaneously for spec-approved tasks.
-
-### Step 7: Fix Quality Issues
-
-Same fix loop pattern as spec issues.
-
-### Step 8: Validate & Complete Wave
+### Step 6: Validate & Complete Wave
 
 1. Run validation across the entire project: `go build ./...`, `go test ./...`, `go vet ./...`
 2. **If validation fails (Integration Issue):**
@@ -215,7 +193,7 @@ Same fix loop pattern as spec issues.
 
 ## Phase 3: Final Review
 
-After all waves complete, dispatch `code-reviewer` subagent for the entire implementation (all files changed across all waves).
+After all waves complete, dispatch `code-reviewer` subagent for the entire implementation (all files changed across all waves). This is the single, global architecture/code-quality pass — it assumes functional correctness is already verified by the per-task spec reviews and wave validation, and focuses on SOLID, security, and code-judo simplification opportunities.
 
 ## File Conflict Safety
 
@@ -248,7 +226,6 @@ Task 3 modifies: internal/shared/router.go (no conflict)
 
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
-- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 
 ### Additional Context for Parallel Implementers
 
@@ -287,24 +264,23 @@ For full workflow examples including wave execution, concurrency batching, and a
 
 If the plan has **no dependency graph** or all tasks share files:
 - Fall back to sequential execution (one task at a time)
-- Same review gates still apply
-- This is equivalent to the original sequential behavior
+- The spec-review gate still applies per task
+- This is the simplest execution path — no parallelism, but same correctness guarantees
 
 ## Red Flags
 
 **Never:**
 - Start implementation on main/master branch without explicit user consent
-- Skip reviews (spec compliance OR code quality)
-- Proceed with unfixed issues
+- Skip the spec review gate
+- Proceed with unfixed spec issues
 - **Dispatch parallel subagents that modify the same files** — verify file lists first
 - Make subagent read plan file (provide full text instead)
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
 - Accept "close enough" on spec compliance
 - Skip review loops (reviewer found issues = implementer fixes = review again)
-- Let implementer self-review replace actual review (both are needed)
-- **Start code quality review before spec compliance is ✅** (wrong order)
-- Move to next task/wave while either review has open issues
+- Let implementer self-review replace the spec review (both are needed)
+- Move to next task/wave while the spec review has open issues
 - **Start next wave before current wave fully completes** (dependency violation)
 
 **If subagent asks questions:**
@@ -341,36 +317,31 @@ If the plan has **no dependency graph** or all tasks share files:
 - Parallel-safe (file conflict check before dispatch)
 - Subagent can ask questions (before AND during work)
 
-**vs. Executing Plans:**
-- Same session (no handoff)
-- Continuous progress (no waiting for human between AFK batches)
-- Review checkpoints automatic
-- **Parallel execution** of independent tasks
-
 **Quality gates:**
 - Self-review catches issues before handoff
-- Two-stage review: spec compliance, then code quality
+- Per-task spec review verifies functional correctness (builds, tests pass, acceptance criteria met)
 - Review loops ensure fixes actually work
 - Spec compliance prevents over/under-building
-- Code quality ensures implementation is well-built
+- One global architecture/quality review (Phase 3) catches cross-cutting issues without per-task overhead
 
 **Cost:**
-- More subagent invocations (implementer + 2 reviewers per task)
+- One implementer + one spec reviewer per task (plus the single final code-reviewer)
 - Controller does more prep work (parsing DAG, computing waves, checking file conflicts)
-- Review loops add iterations
-- But catches issues early (cheaper than debugging later)
+- Spec review loops add iterations
+- But catches functional issues early (cheaper than debugging later)
 - **Parallelism offsets the per-task overhead** — total wall-clock time is reduced
 
 ## Integration
 
 **Required workflow skills:**
 - `writing-plans` — Creates the plan with dependency graph that this skill executes
-- `code-review-expert` — Code review template for reviewer subagents
 
 **Subagents should use:**
 - `test-driven-development` — Subagents follow TDD for each task
-- `e2e-testing` — Subagents add E2E tests when implementing API endpoints
+- `e2e-testing` — Subagents add E2E tests when implementing API endpoints (E2E tests are planned as tasks, not a separate gate)
 
-**Alternative workflows:**
-- `executing-plans` — Use for parallel session instead of same-session execution
+**Final review:**
+- `code-reviewer` agent — Dispatched once in Phase 3 for the global architecture/quality pass (it loads `code-review-expert` internally)
+
+**Related workflows:**
 - `dispatching-parallel-agents` — Use for concurrent independent ad-hoc problems, NOT for plan execution

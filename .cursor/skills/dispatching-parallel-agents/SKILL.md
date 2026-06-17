@@ -133,9 +133,9 @@ Return: Summary of what you found and what you fixed.
 |---|---|---|
 | **Input** | Ad-hoc problems/failures | Implementation plan from `writing-plans` |
 | **Execution** | All agents run concurrently | One task at a time, sequentially |
-| **Review** | Post-integration only | Two-stage review after each task |
+| **Review** | Post-integration only | Spec review after each task |
 | **When** | Multiple independent bugs/issues | Building features from a plan |
-| **Agent count** | N agents simultaneously | 1 implementer + 2 reviewers per task |
+| **Agent count** | N agents simultaneously | 1 implementer + 1 spec reviewer per task |
 | **Coordination** | None (independent) | Controller orchestrates sequence |
 
 **Rule of thumb:** "Fix N broken things" → this skill. "Build something from a plan" → `subagent-driven-development`.

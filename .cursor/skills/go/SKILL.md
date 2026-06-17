@@ -11,11 +11,10 @@ Build features end-to-end with one automatic pipeline: design first, then implem
 ## Flow
 
 1. Read and follow `brainstorming` skill — only in this step you must confirm requirements with the user.
-2. After the user approves the design, continue automatically with `writing-plans` skill.
+2. After the user approves the design, continue automatically with `writing-plans` skill. If the change adds/modifies API endpoints, the plan MUST include E2E test tasks (E2E is a planned task, not a separate gate).
 3. After plan creation, continue automatically with `subagent-driven-development` skill (wave-parallel execution using the dependency graph from the plan).
-4. After implementation, run E2E tests if the change touches API endpoints (see E2E Gate below).
-5. After E2E, dispatch `code-reviewer` subagent and request complete fixes for identified issues.
-6. After review/fixes, dispatch `code-simplifier` subagent once and report final result.
+4. After implementation, dispatch `code-reviewer` subagent and request complete fixes for identified issues.
+5. After review/fixes, dispatch `code-simplifier` subagent once and report final result.
 
 ---
 
@@ -45,16 +44,6 @@ Build features end-to-end with one automatic pipeline: design first, then implem
 - After `code-reviewer` fixes, re-run validation to ensure correctness.
 - Only proceed to next stage if validation passes or no validation is available.
 
-## E2E Gate
-
-If the change adds or modifies API endpoints (handlers, routes, DTOs):
-
-1. Read and follow `e2e-testing` skill to add E2E tests for new/changed endpoints.
-2. Run `make e2e` — all tests must pass (existing + new).
-3. If E2E fails, fix before proceeding to code review.
-
-Skip this gate if the change is purely internal (domain logic, repository, no API surface change).
-
 ---
 
 ## Step 1: Brainstorming
@@ -80,17 +69,9 @@ Skip this gate if the change is purely internal (domain logic, repository, no AP
 - Read and follow `.cursor/skills/subagent-driven-development/SKILL.md`.
 - Parse the plan's dependency graph and compute execution waves.
 - Dispatch independent tasks in parallel within each wave.
-- Run two-stage review (spec compliance + code quality) after each wave.
+- Run spec-compliance review after each wave (architecture/code-quality is reviewed once, globally, in Step 4).
 - Do not ask for design or process approval again during execution.
 - Respect locked requirements from brainstorming.
-
----
-
-## Step 3.5: E2E Gate (conditional)
-
-- If the implementation touches API endpoints, read and follow `.cursor/skills/e2e-testing/SKILL.md`.
-- Run `make e2e` and confirm all tests pass.
-- If no API surface was changed, skip this step.
 
 ---
 
@@ -125,4 +106,4 @@ Skip this gate if the change is purely internal (domain logic, repository, no AP
 - `brainstorming` is the only step allowed to ask clarifying questions.
 - Steps 2-5 run as an autonomous chain — do not ask for confirmation between them.
 - `subagent-driven-development` uses the dependency graph from `writing-plans` to maximize parallel execution of independent tasks.
-- E2E tests are **mandatory** for new API endpoints and **recommended** for modified endpoints.
+- E2E tests for new API endpoints are planned as tasks in Step 2 and executed in Step 3 — **mandatory** for new endpoints, **recommended** for modified.
