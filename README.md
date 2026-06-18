@@ -203,7 +203,6 @@ Skills are reusable AI workflow instructions located in `.cursor/skills/`:
 | **Flow** | `brainstorming` | Requirements exploration, outputs design spec | Auto-triggered before feature creation |
 | **Planning** | `writing-plans` | Write implementation plans with dependency graphs and test scenarios | Multi-step tasks with specs |
 | **Execution** | `subagent-driven-development` | Dependency-aware wave execution with per-task spec review | Current session plan execution |
-| **Execution** | `dispatching-parallel-agents` | Dispatch multiple agents in parallel | 2+ independent tasks |
 | **Execution** | `test-driven-development` | TDD-driven development | New features, bug fixes |
 | **Review** | `code-review-expert` | SOLID / security / architecture review | Review git changes |
 

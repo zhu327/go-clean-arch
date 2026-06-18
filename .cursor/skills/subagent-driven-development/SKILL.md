@@ -12,81 +12,44 @@ Execute plan by dispatching subagents per task with **dependency-aware parallel 
 
 ## When to Use
 
-```dot
-digraph when_to_use {
-    "Have implementation plan?" [shape=diamond];
-    "subagent-driven-development" [shape=box];
-    "dispatching-parallel-agents" [shape=box];
-    "Manual execution or brainstorm first" [shape=box];
-
-    "Have implementation plan?" -> "subagent-driven-development" [label="yes"];
-    "Have implementation plan?" -> "dispatching-parallel-agents" [label="no - but N independent ad-hoc problems"];
-    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no - single problem or unclear"];
-}
-```
-
+- **Have an implementation plan?** → Use this skill (subagent-driven-development)
+- **Single problem or unclear?** → Manual execution or brainstorm first
 - **No dependency graph?** SDD falls back to sequential execution internally (see "Falling Back to Sequential") — a plan without a graph is still executable, just not parallelized.
-- **N independent bugs/issues, not a plan?** Use `dispatching-parallel-agents` instead.
+- **N independent bugs/issues?** Dispatch multiple Task tool calls in a single message — no special skill needed.
 
-**vs. Dispatching Parallel Agents:**
+**vs. ad-hoc parallel dispatch:**
 - This skill: **wave-parallel** execution of **planned** tasks with a spec-review gate per task
-- Parallel Agents: **concurrent** execution of independent **ad-hoc** problems (bugs, investigations)
-- Use `dispatching-parallel-agents` when you have N independent bugs/issues, NOT a plan to execute
+- Ad-hoc parallel: simply dispatch multiple Task tool calls in one message for independent problems (bugs, investigations) — no plan, no spec review gate
+- Use ad-hoc parallel dispatch when you have N independent bugs/issues, NOT a plan to execute
 
 ## The Process
 
-```dot
-digraph process {
-    rankdir=TB;
-
-    "Parse plan: extract tasks, dependency graph, file lists" [shape=box];
-    "Run plan preflight checks" [shape=box];
-    "Compute execution waves via topological sort" [shape=box];
-    "Verify file conflicts within each wave" [shape=box];
-    "Create TodoWrite with all tasks" [shape=box];
-
-    subgraph cluster_wave {
-        label="Per Wave";
-
-        "Handle HITL tasks first (ask user)" [shape=box];
-        "Dispatch AFK implementers in parallel (max 4 per batch)" [shape=box];
-        "Collect results as subagents complete" [shape=box];
-        "Dispatch ALL spec reviewers in parallel" [shape=box];
-        "All spec reviews pass?" [shape=diamond];
-        "Fix spec issues (per task: implementer fixes → re-review)" [shape=box];
-        "Run validation (go build, go test, go vet)" [shape=box];
-        "Validation passes?" [shape=diamond];
-        "Dispatch Integration Fixer subagent" [shape=box];
-        "Mark all wave tasks complete" [shape=box];
-    }
-
-    "More waves?" [shape=diamond];
-    "Run final feature acceptance audit" [shape=box];
-    "Dispatch final code-reviewer for entire implementation" [shape=box];
-
-    "Parse plan: extract tasks, dependency graph, file lists" -> "Run plan preflight checks";
-    "Run plan preflight checks" -> "Compute execution waves via topological sort";
-    "Compute execution waves via topological sort" -> "Verify file conflicts within each wave";
-    "Verify file conflicts within each wave" -> "Create TodoWrite with all tasks";
-    "Create TodoWrite with all tasks" -> "Handle HITL tasks first (ask user)";
-
-    "Handle HITL tasks first (ask user)" -> "Dispatch AFK implementers in parallel (max 4 per batch)";
-    "Dispatch AFK implementers in parallel (max 4 per batch)" -> "Collect results as subagents complete";
-    "Collect results as subagents complete" -> "Dispatch ALL spec reviewers in parallel";
-    "Dispatch ALL spec reviewers in parallel" -> "All spec reviews pass?";
-    "All spec reviews pass?" -> "Fix spec issues (per task: implementer fixes → re-review)" [label="no"];
-    "Fix spec issues (per task: implementer fixes → re-review)" -> "Dispatch ALL spec reviewers in parallel" [label="re-review failed tasks"];
-    "All spec reviews pass?" -> "Run validation (go build, go test, go vet)" [label="yes"];
-    "Run validation (go build, go test, go vet)" -> "Validation passes?";
-    "Validation passes?" -> "Mark all wave tasks complete" [label="yes"];
-    "Validation passes?" -> "Dispatch Integration Fixer subagent" [label="no - integration issue"];
-    "Dispatch Integration Fixer subagent" -> "Run validation (go build, go test, go vet)" [label="re-validate"];
-
-    "Mark all wave tasks complete" -> "More waves?";
-    "More waves?" -> "Handle HITL tasks first (ask user)" [label="yes - next wave"];
-    "More waves?" -> "Run final feature acceptance audit" [label="no"];
-    "Run final feature acceptance audit" -> "Dispatch final code-reviewer for entire implementation";
-}
+```
+Phase 1: Parse Plan & Build Schedule
+  │
+  ├─ Extract tasks + dependency graph + file lists
+  ├─ Run plan preflight checks (fail → return to writing-plans)
+  ├─ Compute execution waves (topological sort)
+  ├─ Verify file conflicts within each wave
+  └─ Create TodoWrite with all tasks
+  │
+  ▼
+Phase 2: Execute Waves (repeat per wave)
+  │
+  ├─ Handle HITL tasks first (ask user)
+  ├─ Dispatch AFK implementers in parallel (max 4 per batch)
+  ├─ Collect results (wait for all in wave)
+  ├─ Dispatch ALL spec reviewers in parallel
+  ├─ If spec issues → fix (implementer fixes → re-review) → loop
+  ├─ Run validation (go build, go test, go vet)
+  ├─ If validation fails → dispatch Integration Fixer → re-validate → loop
+  └─ Mark all wave tasks complete → next wave
+  │
+  ▼
+Phase 3: Final Feature Acceptance Audit
+  │
+  ▼
+Phase 4: Dispatch code-reviewer for entire implementation
 ```
 
 ## Phase 1: Parse Plan & Build Schedule
@@ -213,18 +176,18 @@ Tasks that pass spec review are ready for wave validation.
 
 ## Phase 3: Final Feature Acceptance Audit
 
-After all waves complete and before global code review, run a lightweight acceptance audit. This is NOT a second code-quality review and does NOT replace the per-task spec reviews. It is a controller checklist to prove the planned feature is complete:
+After all waves complete and before global code review, run a lightweight acceptance audit. This is a **controller-level completeness check** — it verifies the feature as a whole is ready, not what individual spec reviews already confirmed.
 
-- All planned tasks are completed
-- All task spec reviews passed
-- All wave validations passed (`go build ./...`, `go test ./...`, `go vet ./...` where applicable)
+Checklist:
+
+- All planned tasks are marked complete
+- All wave validations passed (`go build ./...`, `go test ./...`, `go vet ./...`)
 - `make e2e` passed if API E2E tasks were added
-- Every task acceptance criterion has evidence from code, tests, or reviewer output
-- The implemented feature, taken as a whole, satisfies the approved goal/requirements from brainstorming — not just that each task's acceptance criterion has evidence
-- All cross-wave public interfaces/contracts match the plan; when in doubt, read the actual source of downstream dependencies and compare against the plan's Interface Contracts
+- The implemented feature, taken as a whole, satisfies the approved goal/requirements from brainstorming (not just task-by-task — does the end-to-end story work?)
+- All cross-wave public interfaces/contracts are consistent; when in doubt, read the actual source of downstream dependencies and compare against the plan's Interface Contracts
 - Any deviation from the approved requirements/design is documented and explicitly approved
 
-If any item fails, fix or escalate before global code review. Do not send an incomplete feature to `code-reviewer` and ask it to rediscover functional gaps.
+If any item fails, fix or escalate before global code review. Do not send an incomplete feature to `code-reviewer`.
 
 ## Phase 4: Final Review
 
@@ -379,4 +342,4 @@ If the plan has **no dependency graph** or all tasks share files:
 - `code-reviewer` agent — Dispatched once in Phase 4 for the global architecture/quality pass (it loads `code-review-expert` internally)
 
 **Related workflows:**
-- `dispatching-parallel-agents` — Use for concurrent independent ad-hoc problems, NOT for plan execution
+- Ad-hoc parallel dispatch — For concurrent independent problems, simply dispatch multiple Task tool calls in one message (no special skill needed)

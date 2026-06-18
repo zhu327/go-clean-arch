@@ -9,7 +9,7 @@ description: Write implementation plans with vertical slices, dependency graphs,
 
 Write implementation plans that define the **skeleton** of the work: which files to touch for each task, the interface contracts to create, the test cases that must pass, and how to verify the result. Give the implementer the whole plan as bite-sized vertical-slice tasks. DRY. YAGNI. TDD.
 
-The plan describes **what** to build (contracts, file paths, dependencies) and **how it is verified** (acceptance criteria, test cases). It does NOT write the implementation code — that is the implementer's job, done test-first. Writing code in the plan wastes context and forces the implementer to regenerate (and often silently diverge from) the same code.
+The plan describes **what** to build (contracts, file paths, dependencies) and **how it is verified** (acceptance criteria, test cases). It includes **skeleton code** — interface definitions, struct shapes, and function signatures — but NOT method bodies or test implementations. The implementer writes all bodies via TDD.
 
 Assume the implementer is a skilled developer who knows almost nothing about our toolset or problem domain, and needs explicit contracts and test scenarios to work autonomously.
 
@@ -55,7 +55,9 @@ Ask the user:
 - Should any slices be merged or split further?
 - Are the correct slices marked as HITL and AFK?
 
-**STOP HERE.** Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz. 在这里停止。在用户明确批准拆分并回答问题之前，不要编写完整的计划或进入第 4 步。
+**When running standalone** (not inside `/go`): STOP HERE. Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz.
+
+**When running inside `/go` pipeline**: Skip the quiz — proceed directly to Step 4 using the breakdown as-is. The user already approved the requirements in brainstorming; re-asking here breaks the autonomous chain.
 
 ### 4. Write the Full Plan
 
@@ -69,7 +71,7 @@ Before handing off to execution, explicitly verify the plan covers the approved 
 
 - **A Task** represents one Vertical Slice — a complete end-to-end feature path (typically 30-60 minutes).
 
-Because a Vertical Slice touches multiple layers, a single Task MUST list the interface contracts and test cases for each layer it touches (e.g., Repository, UseCase, Handler). The plan defines WHAT to build (contracts) and HOW it is verified (acceptance criteria + test cases); it does NOT write the implementation code. The implementer applies TDD per test case (red-green-refactor) — that discipline lives in the `implementer-prompt`, so do not repeat it as numbered steps in every task.
+Because a Vertical Slice touches multiple layers, a single Task MUST list the interface contracts and test cases for each layer it touches (e.g., Repository, UseCase, Handler). The plan defines WHAT to build (skeleton code: interfaces, structs, signatures) and HOW it is verified (acceptance criteria + test cases); it does NOT include method bodies or test code. The implementer applies TDD per test case (red-green-refactor) — that discipline lives in the `implementer-prompt`, so do not repeat it as numbered steps in every task.
 
 ## Plan Document Header
 
@@ -137,7 +139,7 @@ Task 3 (HITL) ───── Task 5 (AFK)
 
 #### Interface Contracts
 
-Define the contracts the implementer must create — interfaces, struct shapes, and function signatures. These are the skeleton; the implementer writes the bodies via TDD. List only what this task introduces or changes. If a contract already exists in another module, reference its file path instead of redefining it.
+Define the skeleton the implementer must create — interfaces, struct shapes, and function signatures. List only what this task introduces or changes. If a contract already exists in another module, reference its file path instead of redefining it.
 
 \```go
 // domain/entity.go
@@ -164,7 +166,7 @@ func NewHandler(manager Manager) *Handler
 func (h *Handler) Create(c *gin.Context)
 \```
 
-> Signatures only. No method bodies, no test code. These contracts are what downstream tasks (and the spec reviewer) will check against.
+> Signatures and type definitions only. No method bodies, no test code. These are what downstream tasks (and the spec reviewer) check against.
 
 #### Test Cases to Cover
 
@@ -237,8 +239,7 @@ If a checklist item does not apply, mark it `N/A` with a short reason instead of
 
 ## Remember
 - Exact file paths always
-- Interface contracts + test-case descriptions in the plan, NOT implementation code — define the skeleton, not the body; leave the code to the TDD implementer
-- A one-line minimal code example is allowed only when a contract cannot be made clear in prose — never full method bodies
+- Skeleton code (interfaces, structs, signatures) in the plan, NOT method bodies or test implementations — define the shape, the implementer writes the logic via TDD
 - Exact validation commands where relevant
 - Reference relevant skills with @ syntax
 - DRY, YAGNI, TDD (enforced by the implementer, not re-written as numbered steps per task)

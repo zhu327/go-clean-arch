@@ -6,9 +6,9 @@ disable-model-invocation: true
 
 # Subagent-Driven Development
 
-Execute plan by dispatching subagents per task with **dependency-aware parallel scheduling**. Tasks without mutual dependencies run concurrently in waves. Each task gets two-stage review (spec compliance then code quality).
+Execute plan by dispatching subagents per task with **dependency-aware parallel scheduling**. Tasks without mutual dependencies run concurrently in waves. Each task gets a spec-compliance review gate (does it build, do tests pass, does it meet the task's acceptance criteria). Architecture and code-quality are reviewed once, globally, after all waves — not per task.
 
-**Core principle:** Dependency graph drives parallelism. Fresh subagent per task via the `subagent` tool. Two-stage review gates. Maximum concurrency within safety bounds.
+**Core principle:** Dependency graph drives parallelism. Fresh subagent per task via the `subagent` tool. Spec-compliance review gate per task (functional correctness). Global quality review at the end. Maximum concurrency within safety bounds.
 
 **Tool used:** `subagent` — use top-level `agent` + `task` for one-off dispatch, `tasks` array for parallel dispatch, and `chain` for sequential chains.
 
@@ -32,43 +32,8 @@ Have implementation plan?
 - Faster iteration (no human-in-loop between AFK tasks)
 
 **vs. Dispatching Parallel Agents:**
-- This skill: **wave-parallel** execution of **planned** tasks with review gates
-- Parallel Agents: **concurrent** execution of independent **ad-hoc** problems (bugs, investigations)
-- Use /skill:dispatching-parallel-agents when you have N independent bugs/issues, NOT a plan to execute
-
-## When Invoked by /go
-
-When this skill is invoked as part of `/go`, the main agent is the workflow coordinator and **must not implement planned changes directly**.
-
-Go mode requirements:
-- At least one `subagent` call is mandatory before execution can be considered complete.
-- If the implementation plan has exactly one task, dispatch one implementation subagent for that task instead of implementing it in the coordinator.
-- If independent tasks exist, use the normal dependency-aware parallel waves and file-conflict checks.
-- Sequential fallback is still subagent-driven: dispatch one task at a time via the `subagent` tool with top-level `agent` + `task`; never replace subagent execution with coordinator implementation.
-- `/go` mode must not ask new HITL questions during execution. If a task still needs an unresolved human decision, stop and report GO-4 as blocked.
-- If no suitable implementation subagent can be dispatched, **STOP** and report the blocker to the `/go` coordinator.
-- After implementation and validation, return a structured execution report to the `go` coordinator; the `go` coordinator owns the separate whole-change review gate.
-
-Go mode execution report format:
-
-```markdown
-## Subagent Execution Report
-
-**Tasks run:**
-- <task name/id> — <completed/blocked/deviated: reason>
-
-**Agents used:**
-- <agent name or default> — <task/review/fix role>
-
-**Files changed:**
-- `<path>` — <summary or task responsible>
-
-**Validation:**
-- `<command>` — <passed/failed/skipped: reason>
-
-**Blockers / deviations:**
-- None / <details>
-```
+- This skill: **wave-parallel** execution of **planned** tasks with a spec-review gate per task
+- For N independent bugs/issues, simply dispatch multiple Task tool calls in one message — no special skill needed
 
 ## The Process
 
@@ -84,15 +49,13 @@ Per Wave:
   c. Collect results as subagents complete
   d. Dispatch ALL spec reviewers in parallel via the `subagent` tool's `tasks` payload
   e. Fix spec issues (implementer fixes → re-review)
-  f. Dispatch ALL code quality reviewers in parallel via the `subagent` tool's `tasks` payload
-  g. Fix quality issues (implementer fixes → re-review)
-  h. Run validation (go build, go test, go vet) via bash
-  i. If validation fails → dispatch Integration Fixer subagent
-  j. Mark all wave tasks complete in todo
+  f. Run validation (go build, go test, go vet) via bash
+  g. If validation fails → dispatch Integration Fixer subagent
+  h. Mark all wave tasks complete in todo
 
 After all waves:
-  Non-go mode: dispatch final code-reviewer agent for entire implementation
-  /go mode: return execution report; go coordinator owns whole-change review
+  Run final feature acceptance audit
+  Dispatch final code-reviewer agent for entire implementation
 ```
 
 ## Phase 1: Parse Plan & Build Schedule
@@ -100,12 +63,28 @@ After all waves:
 1. Read the plan file once (use `read` tool)
 2. Extract the **Task Dependency Graph** (the table with "Blocked by" and "Parallelizable with" columns)
 3. Extract the **Files** section of each task (Create/Modify lists)
-4. Compute execution waves via topological sort:
+4. Run **Plan Preflight Checks** (below). If a required item fails, STOP and report the missing plan detail instead of guessing.
+5. Compute execution waves via topological sort:
    - **Wave 0:** tasks with no dependencies (can start immediately)
    - **Wave N:** tasks whose ALL dependencies are in waves < N
-5. Verify file safety within each wave (see File Conflict Safety below)
-6. Separate HITL from AFK tasks within each wave
-7. Create `todo` items with all tasks, annotated with wave number
+6. Verify file safety within each wave (see File Conflict Safety below)
+7. Separate HITL from AFK tasks within each wave
+8. Create `todo` items with all tasks, annotated with wave number
+
+### Plan Preflight Checks
+
+Before dispatching any implementer, verify the plan is executable:
+
+- The plan contains a **Plan Coverage Checklist** and it has no unchecked required items
+- Every task has acceptance criteria, test cases, and exact Create/Modify file paths
+- The dependency graph has no cycles; if no graph exists, explicitly fall back to sequential execution
+- Tasks planned for the same wave do not modify the same files (or are split into sub-waves)
+- If the plan or approved design adds/modifies API endpoints, the plan includes E2E test task(s)
+- Any documented assumption/deviation is explicit enough for implementers and reviewers
+
+If API work is present and no E2E task exists, STOP before execution.
+
+**When any preflight check fails**, do not guess or silently work around it. STOP, return the specific gap to `writing-plans` for revision, then re-run the preflight from the top. Only begin dispatching implementers once every check passes.
 
 ### Wave Computation Example
 
@@ -138,7 +117,7 @@ HITL tasks need human decisions before agent can proceed:
 1. Present the HITL task to the user with the decision needed (use `question` tool)
 2. Wait for user response
 3. Dispatch implementer subagent with the decision as additional context
-4. Run spec review + code quality review (sequential per HITL task)
+4. Run spec review (per HITL task)
 5. Mark complete in `todo`
 
 ### Step 2: Dispatch AFK Implementers in Parallel
@@ -183,6 +162,8 @@ As subagents complete, collect their reports. Wait for ALL implementers in the w
 }
 ```
 
+The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, after all waves. Use the `./spec-reviewer-prompt.md` template.
+
 ### Step 5: Fix Spec Issues
 
 For each task where spec review found issues:
@@ -191,17 +172,9 @@ For each task where spec review found issues:
 3. Repeat until ✅
 
 Fix loops are **per-task and serialized** (implementer must fix before re-review).
-Tasks that passed spec review can proceed to code quality review immediately.
+Tasks that passed spec review are ready for wave validation.
 
-### Step 6: Dispatch Code Quality Reviewers in Parallel
-
-Same pattern: dispatch all code quality reviewers simultaneously for spec-approved tasks via the `subagent` tool's `tasks` payload.
-
-### Step 7: Fix Quality Issues
-
-Same fix loop pattern as spec issues.
-
-### Step 8: Validate & Complete Wave
+### Step 6: Validate & Complete Wave
 
 1. Run validation across the entire project: `bash("go build ./...")`, `bash("go test ./...")`, `bash("go vet ./...")`
 2. **If validation fails (Integration Issue):**
@@ -216,11 +189,24 @@ Same fix loop pattern as spec issues.
 3. Mark all wave tasks complete in `todo`
 4. Proceed to next wave
 
-## Phase 3: Final Review
+## Phase 3: Final Feature Acceptance Audit
 
-After all waves complete, dispatch `code-reviewer` agent for the entire implementation (all files changed across all waves).
+After all waves complete and before global code review, run a lightweight acceptance audit. This is a **controller-level completeness check** — it verifies the feature as a whole is ready.
 
-When invoked by `/go`, skip this phase and return the execution report instead; the `go` coordinator owns the separate whole-change review gate.
+Checklist:
+
+- All planned tasks are marked complete
+- All wave validations passed (`bash("go build ./...")`, `bash("go test ./...")`, `bash("go vet ./...")`)
+- `bash("make e2e")` passed if API E2E tasks were added
+- The implemented feature, taken as a whole, satisfies the approved goal/requirements from brainstorming (not just task-by-task — does the end-to-end story work?)
+- All cross-wave public interfaces/contracts are consistent; when in doubt, read the actual source of downstream dependencies and compare against the plan's Interface Contracts
+- Any deviation from the approved requirements/design is documented and explicitly approved
+
+If any item fails, fix or escalate before global code review.
+
+## Phase 4: Final Review
+
+After the acceptance audit passes, dispatch `code-reviewer` agent for the entire implementation (all files changed across all waves). This is the single, global architecture/code-quality pass — functional correctness should already have been checked by per-task spec reviews, wave validation, and the acceptance audit. The reviewer focuses on SOLID, security, and code-judo simplification opportunities, while still flagging obvious correctness bugs noticed during review.
 
 ```json
 {
@@ -262,7 +248,6 @@ Resolve these paths relative to `.pi/skills/subagent-driven-development/`.
 
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
-- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 
 ### Additional Context for Parallel Implementers
 
@@ -314,25 +299,23 @@ If you find a mismatch between the plan and the actual generated code, STOP and 
 
 If the plan has **no dependency graph** or all tasks share files:
 - Fall back to sequential execution (one task at a time via `subagent` with top-level `agent` + `task`)
-- Same review gates still apply
-- This is equivalent to the original sequential behavior
-- In `/go` mode, sequential fallback still requires subagent dispatch for every implementation task; the coordinator must never implement planned changes directly
+- The spec-review gate still applies per task
+- This is the simplest execution path — no parallelism, but same correctness guarantees
 
 ## Red Flags
 
 **Never:**
 - Start implementation on main/master branch without explicit user consent
-- Skip reviews (spec compliance OR code quality)
-- Proceed with unfixed issues
+- Skip the spec review gate
+- Proceed with unfixed spec issues
 - **Dispatch parallel subagents that modify the same files** — verify file lists first
 - Make subagent read plan file (provide full text instead)
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
 - Accept "close enough" on spec compliance
 - Skip review loops (reviewer found issues = implementer fixes = review again)
-- Let implementer self-review replace actual review (both are needed)
-- **Start code quality review before spec compliance is ✅** (wrong order)
-- Move to next task/wave while either review has open issues
+- Let implementer self-review replace the spec review (both are needed)
+- Move to next task/wave while the spec review has open issues
 - **Start next wave before current wave fully completes** (dependency violation)
 
 ## Integration
@@ -343,8 +326,7 @@ If the plan has **no dependency graph** or all tasks share files:
 
 **Subagents should use:**
 - **/skill:test-driven-development** - Subagents follow TDD for each task
-- **/skill:e2e-testing** - Subagents add E2E tests when implementing API endpoints
+- **/skill:e2e-testing** - Subagents add E2E tests when implementing API endpoints (E2E tests are planned as tasks, not a separate gate)
 
-**Alternative workflows:**
-- **/skill:executing-plans** - Use for parallel session instead of same-session execution
-- **/skill:dispatching-parallel-agents** - Use for concurrent independent ad-hoc problems, NOT for plan execution
+**Final review:**
+- `code-reviewer` agent — Dispatched once in Phase 4 for the global architecture/quality pass

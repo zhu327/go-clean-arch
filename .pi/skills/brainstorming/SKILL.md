@@ -17,7 +17,7 @@ Start by understanding the current project context, then ask questions to refine
 
 **Understanding the idea:**
 - Check out the current project state first (files, docs, recent commits) — use `bash` (`git log`, `ls`, `fd`/`rg`), `read` to explore
-- Ask related questions together in one `question` call (2-4 per batch), split only when answers have dependencies
+- Ask related questions together in one `question` call (2-5 per batch), split only when answers have dependencies
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Focus on understanding: purpose, constraints, success criteria
 
@@ -42,19 +42,10 @@ Start by understanding the current project context, then ask questions to refine
 - Ask: "Ready to set up for implementation?"
 - Use /skill:writing-plans to create detailed implementation plan
 
-### When invoked by /go
-
-Go mode changes only the post-design handoff:
-
-- Still use `question` for all requirement clarification and design approval.
-- Still write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
-- After the user approves the design and the design document is saved, do **not** ask “Ready to set up for implementation?”
-- Return control to the `/go` coordinator so it can automatically invoke `/skill:writing-plans`.
-
 ## Key Principles
 
 - **Use question tool** - Use structured questions instead of plain text
-- **Batch related questions** - Ask related questions together (2-4 per batch), split only when answers have dependencies
+- **Batch related questions** - Ask related questions together (2-5 per batch), split only when answers have dependencies
 - **Multiple choice preferred** - Easier to answer than open-ended when possible
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling

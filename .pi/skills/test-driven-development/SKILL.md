@@ -18,6 +18,10 @@ Write code before the test? **Delete it. Start over.** No keeping as "reference"
 
 ## Red-Green-Refactor
 
+The default cycle is one test at a time. For closely related behaviors within the same function, **batch mode** is allowed (see below).
+
+### Single-Test Cycle (Default)
+
 ```
 RED → Write failing test
   ↓
@@ -31,6 +35,22 @@ REFACTOR → Clean up, keep tests green
   ↓
 Next behavior → back to RED
 ```
+
+### Batch Mode (2–4 Related Tests)
+
+When implementing multiple closely related behaviors for the same function/method (e.g., success case + 2 error cases), you may batch them to reduce round-trips:
+
+1. Write 2–4 related failing tests together
+2. Run once to verify ALL fail for the expected reasons
+3. Implement the code to pass all of them
+4. Run once to verify ALL pass
+5. Refactor
+
+**Batch mode rules:**
+- Tests must target the same function/method
+- Each test must be independently meaningful (clear name, one behavior)
+- If any test fails for an unexpected reason during the RED step, fix it before proceeding
+- Maximum batch size: 4 tests — beyond that, split into groups
 
 ### RED — Write Failing Test
 

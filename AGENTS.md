@@ -58,7 +58,6 @@ For finer-grained control, use individual skills:
 | Skill | Purpose | Trigger |
 |-------|---------|---------|
 | `subagent-driven-development` | Subagent-driven development | Current session, one subagent per task, wave-parallel when safe |
-| `dispatching-parallel-agents` | Dispatch parallel agents | 2+ independent tasks |
 | `test-driven-development` | TDD development | New features, bug fixes, refactoring |
 
 ### Review (quality assurance)
@@ -81,7 +80,7 @@ When multiple skills may apply, use them in this order:
 1. **Flow** (`brainstorming`) — Decide how to approach the task
 2. **Planning** (`writing-plans`) — Create the implementation plan
 3. **Execution** (`subagent-driven-development`, `test-driven-development`) — Execute the plan
-4. **Dispatch** (`dispatching-parallel-agents`) — Solve multiple independent problems in parallel
+4. **Review** (`code-review-expert`) — Quality assurance
 5. **Review** (`code-review-expert`) — Quality assurance
 
 ## Learned Patterns

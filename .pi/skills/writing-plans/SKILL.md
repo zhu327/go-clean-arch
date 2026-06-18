@@ -7,29 +7,15 @@ description: Use after requirements or design are understood and before coding a
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD.
+Write implementation plans that define the **skeleton** of the work: which files to touch for each task, the interface contracts to create, the test cases that must pass, and how to verify the result. Give the implementer the whole plan as bite-sized vertical-slice tasks. DRY. YAGNI. TDD.
 
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+The plan includes **skeleton code** — interface definitions, struct shapes, and function signatures — but NOT method bodies or test implementations. The implementer writes all bodies via TDD.
+
+Assume the implementer is a skilled developer who knows almost nothing about our toolset or problem domain, and needs explicit contracts and test scenarios to work autonomously.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
 **Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md` (use the `write` tool)
-
-## When invoked by /go
-
-When this skill is invoked as part of `/go`, the approved brainstorming design is locked input. Do not silently change approved requirements or reopen design choices.
-
-Go mode overrides the normal planning prompts:
-
-- Do not ask the plan-breakdown quiz in Step 3.
-- Do not ask the execution-choice question in Execution Handoff.
-- Write the full implementation plan directly from the approved design.
-- Include a task dependency graph suitable for `/skill:subagent-driven-development`.
-- Mark every task as AFK or HITL.
-- If any HITL task needs a human decision not already resolved by the approved design, stop and report the blocker to the `go` coordinator instead of guessing.
-- Include `**GO_EXECUTION_READY:** true` in the plan header only when the saved plan has no unresolved HITL decisions and can be executed autonomously.
-
-After saving the plan in go mode, return the saved plan path to the `go` coordinator so it can continue automatically.
 
 ## Process
 
@@ -69,20 +55,23 @@ Use the `question` tool to ask the user:
 - Should any slices be merged or split further?
 - Are the correct slices marked as HITL and AFK?
 
-Outside `/go`, **STOP HERE.** Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz. 在这里停止。在用户明确批准拆分并回答问题之前，不要编写完整的计划或进入第 4 步。
+**When running standalone** (not inside `/go`): STOP HERE. Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz.
 
-In `/go`, skip this quiz only after there is an approved brainstorming design and no unresolved HITL decisions. If unresolved HITL decisions exist, stop and report the blocker to the `go` coordinator instead of proceeding.
+**When running inside `/go` pipeline**: Skip this quiz — proceed directly to Step 4 using the breakdown as-is. The user already approved the requirements in brainstorming; re-asking here breaks the autonomous chain. If unresolved HITL decisions exist, stop and report the blocker to the `go` coordinator instead of proceeding.
 
 ### 4. Write the Full Plan
 
-Expand each approved slice into the full Task Structure (see below) and save the plan document using the `write` tool.
+Expand each approved slice into the full Task Structure (see below), add the Plan Coverage Checklist, and save the plan document using the `write` tool.
+
+### 5. Plan Coverage Check
+
+Before handing off to execution, explicitly verify the plan covers the approved requirements and has the guardrails needed for autonomous execution. If any checklist item fails, revise the plan before proceeding — do not hand off a known-incomplete plan.
 
 ## Task & Step Granularity
 
 - **A Task** represents one Vertical Slice — a complete end-to-end feature path (typically 30-60 minutes).
-- **A Step** represents a tiny TDD cycle within that slice (2-5 minutes each).
 
-Because a Vertical Slice touches multiple layers, a single Task MUST contain multiple TDD steps organized by layer (e.g., Step 1-4 for Repository layer, Step 5-8 for UseCase layer, Step 9-12 for HTTP Handler layer).
+Because a Vertical Slice touches multiple layers, a single Task MUST list the interface contracts and test cases for each layer it touches (e.g., Repository, UseCase, Handler). The plan defines WHAT to build (skeleton code: interfaces, structs, signatures) and HOW it is verified (acceptance criteria + test cases); it does NOT include method bodies or test code. The implementer applies TDD per test case (red-green-refactor) — that discipline lives in the `implementer-prompt`, so do not repeat it as numbered steps in every task.
 
 ## Plan Document Header
 
@@ -91,15 +80,13 @@ Because a Vertical Slice touches multiple layers, a single Task MUST contain mul
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For Pi:** Execute this plan using /skill:executing-plans (separate session with checkpoints) or /skill:subagent-driven-development (current session with subagents).
+> **For Pi:** Execute this plan using /skill:subagent-driven-development (current session with subagents).
 
 **Goal:** [One sentence describing what this builds]
 
 **Architecture:** [2-3 sentences about approach]
 
 **Tech Stack:** [Key technologies/libraries]
-
-**GO_EXECUTION_READY:** true/false (only required when invoked by `/go`)
 
 ## Task Dependency Graph
 
@@ -131,6 +118,8 @@ Task 3 (HITL) ───── Task 5 (AFK)
 **Blocked by:** Task X, Task Y / None - can start immediately
 **Layers touched:** Domain, UseCase, Repository, Handler
 
+**Goal:** [One or two sentences: what this slice delivers end-to-end and why]
+
 **Acceptance Criteria:**
 - [ ] Criterion 1 (functional behavior from user perspective)
 - [ ] Criterion 2 (edge case or boundary condition)
@@ -148,193 +137,134 @@ Task 3 (HITL) ───── Task 5 (AFK)
 
 ---
 
-#### Layer 1: Repository / DB
+#### Interface Contracts
 
-**Step 1: Write the failing Repository test**
+Define the skeleton the implementer must create — interfaces, struct shapes, and function signatures. List only what this task introduces or changes. If a contract already exists in another module, reference its file path instead of redefining it.
 
-```go
-func TestRepo_Create(t *testing.T) {
-    // Arrange: set up test DB / container
-    repo := NewRepository(testDB)
-
-    // Act
-    err := repo.Create(context.Background(), &Entity{Name: "test"})
-
-    // Assert
-    assert.NoError(t, err)
-}
-```
-
-**Step 2: Run test to verify it fails**
-
-Run: `go test -v ./internal/{domain}/adapter/repository/... -run TestRepo_Create`
-Expected: FAIL with "undefined: NewRepository"
-
-**Step 3: Write minimal Repository implementation**
-
-```go
-// Repository 实体仓储
-type Repository struct {
-    db *gorm.DB
+\```go
+// domain/entity.go
+type Entity struct {
+    ID   string
+    Name string
+    // ...fields with intent, not boilerplate
 }
 
-// NewRepository 创建仓储实例
-func NewRepository(db *gorm.DB) *Repository {
-    return &Repository{db: db}
+// usecase/interfaces.go
+type Repository interface {
+    Create(ctx context.Context, entity *domain.Entity) error
 }
 
-// Create 持久化实体
-func (r *Repository) Create(ctx context.Context, entity *Entity) error {
-    return r.db.WithContext(ctx).Create(entity).Error
+type Manager interface {
+    Create(ctx context.Context, entity *domain.Entity) error
 }
-```
 
-**Step 4: Run test to verify it passes**
+// adapter/repository/repo.go
+func NewRepository(db *gorm.DB) *Repository
 
-Run: `go test -v ./internal/{domain}/adapter/repository/... -run TestRepo_Create`
-Expected: PASS
+// adapter/delivery/http/handler/handler.go
+func NewHandler(manager Manager) *Handler
+func (h *Handler) Create(c *gin.Context)
+\```
+
+> Signatures and type definitions only. No method bodies, no test code. These are what downstream tasks (and the spec reviewer) check against.
+
+#### Test Cases to Cover
+
+Describe the scenarios the tests must verify — behavior and expected outcomes, not full test code. The implementer writes each test BEFORE its implementation (TDD). Organize by layer.
+
+**Repository layer:**
+- Create succeeds and persists the entity (verify via re-query or a test DB/container)
+- Create returns the DB error transparently on failure
+
+**UseCase layer:**
+- Create delegates to the Repository and returns its error
+- Create validates input (e.g., rejects empty Name) before calling the Repository
+
+**HTTP Handler layer:**
+- POST returns 200 with the created resource on valid input
+- POST returns 400 on missing/invalid required fields
+- Handler delegates to Manager and maps errors to the right response codes
+
+#### Layer Guidance
+
+Brief notes on each layer's responsibility in this slice, so the implementer understands intent without being handed the code:
+
+- **Domain:** define the `Entity` and any invariants
+- **Repository:** persist via GORM; follow existing repo patterns in this module
+- **UseCase:** orchestrate, validate input, own business rules; depend on the `Repository` interface (mocked in tests)
+- **Handler:** bind request, call Manager, format response; register the route in the router; wire into DI
 
 ---
 
-#### Layer 2: UseCase
+#### Validation
 
-**Step 5: Write the failing UseCase test (mocking Repository)**
+Run after the slice is implemented:
 
-```go
-func TestManager_Create(t *testing.T) {
-    ctrl := gomock.NewController(t)
-    defer ctrl.Finish()
+\```bash
+go build ./...
+go test ./internal/{domain}/...
+go vet ./{domain}/...
+\```
 
-    mockRepo := mock.NewMockRepository(ctrl)
-    mockRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
-    manager := NewManager(mockRepo)
-
-    err := manager.Create(context.Background(), &Entity{Name: "test"})
-    assert.NoError(t, err)
-}
+If this slice adds/modifies API endpoints, an E2E test task (see below) must also pass: `make e2e`.
 ```
 
-**Step 6: Run test to verify it fails**
+### E2E Test Tasks
 
-Run: `go test -v ./internal/{domain}/usecase/... -run TestManager_Create`
-Expected: FAIL with "undefined: NewManager"
+If the feature adds or modifies API endpoints, the plan MUST include one or more E2E test tasks (do NOT treat E2E as a separate gate that runs after the whole feature — it is a task in the plan, executed by the same subagent-driven-development flow). Each E2E task:
 
-**Step 7: Write minimal UseCase implementation**
+- Is typed AFK and blocked by the endpoint task(s) it covers
+- Lists the endpoints + scenarios to cover (use the `/skill:e2e-testing` for the methodology)
+- Has acceptance criteria like: `make e2e` passes (existing + new tests)
 
-```go
-// Manager 实体管理器
-type Manager struct {
-    repo Repository
-}
+## Plan Coverage Checklist
 
-// NewManager 创建管理器实例
-func NewManager(repo Repository) *Manager {
-    return &Manager{repo: repo}
-}
+Every plan MUST include this checklist before the Execution Handoff. Fill it in based on the approved brainstorming requirements/design and the final task list:
 
-// Create 创建实体
-func (m *Manager) Create(ctx context.Context, entity *Entity) error {
-    return m.repo.Create(ctx, entity)
-}
+```markdown
+## Plan Coverage Checklist
+
+- [ ] Every approved requirement maps to at least one task
+- [ ] Every task has clear acceptance criteria
+- [ ] Every task lists behavior-focused test cases
+- [ ] Every task lists exact Create/Modify file paths
+- [ ] New or modified API endpoints have E2E test task(s)
+- [ ] The dependency graph has no cycles
+- [ ] Parallelizable tasks do not modify the same files
+- [ ] No task is purely horizontal unless it is unavoidable infrastructure
+- [ ] Known assumptions or deviations from the approved design are documented
 ```
 
-**Step 8: Run test to verify it passes**
-
-Run: `go test -v ./internal/{domain}/usecase/... -run TestManager_Create`
-Expected: PASS
-
----
-
-#### Layer 3: HTTP Handler & Route
-
-**Step 9: Write the failing Handler test**
-
-```go
-func TestHandler_Create(t *testing.T) {
-    ctrl := gomock.NewController(t)
-    defer ctrl.Finish()
-
-    mockManager := mock.NewMockManager(ctrl)
-    mockManager.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-
-    handler := NewHandler(mockManager)
-
-    w := httptest.NewRecorder()
-    c, _ := gin.CreateTestContext(w)
-    c.Request = httptest.NewRequest("POST", "/api/v1/entities", strings.NewReader(`{"name":"test"}`))
-
-    handler.Create(c)
-    assert.Equal(t, http.StatusOK, w.Code)
-}
-```
-
-**Step 10: Implement Handler, register Route, wire DI**
-
-```go
-// Handler HTTP 处理器
-type Handler struct {
-    manager Manager
-}
-
-func NewHandler(manager Manager) *Handler {
-    return &Handler{manager: manager}
-}
-
-func (h *Handler) Create(c *gin.Context) {
-    // parse, call manager, respond
-}
-```
-
-**Step 11: Run all tests for this slice**
-
-Run: `go test -v ./internal/{domain}/...`
-Expected: ALL PASS
-
-**Step 12: Lint & commit**
-
-```bash
-make fmt && make lint
-git add internal/{domain}/
-```
-```
+If a checklist item does not apply, mark it `N/A` with a short reason instead of silently omitting it.
 
 ## Remember
 - Exact file paths always
-- Complete code in plan (not "add validation")
-- Exact commands with expected output
+- Skeleton code (interfaces, structs, signatures) in the plan, NOT method bodies or test implementations — define the shape, the implementer writes the logic via TDD
+- Exact validation commands where relevant
 - Reference relevant skills with /skill: syntax
-- DRY, YAGNI, TDD
+- DRY, YAGNI, TDD (enforced by the implementer, not re-written as numbered steps per task)
 - If the plan adds/modifies API endpoints, identify the E2E requirement and include E2E authoring in the relevant task or as a separate vertical slice (use `/skill:e2e-testing`)
 - Vertical slices, not horizontal layers — each task must be independently verifiable
 - Declare dependencies explicitly — enable parallel execution where possible
 
 ## Execution Handoff
 
-Outside `/go`, after saving the plan, use `question` to offer execution choice.
+After saving the plan, hand off to `/skill:subagent-driven-development` for execution in the current session:
 
-In `/go`, do not ask for execution choice. Return the saved plan path to the `go` coordinator so it can continue with `/skill:subagent-driven-development`.
+- Fresh subagent per task, wave-parallel execution using the dependency graph
+- Spec-compliance review gate per task; global architecture/quality review at the end
 
-Execution choice question:
+Within the `/go` pipeline this handoff is automatic (no confirmation). When running `writing-plans` standalone, confirm with the user before starting execution:
 
 ```
 question({
   questions: [{
-    id: "execution_approach",
-    prompt: "Plan saved to docs/plans/<filename>.md. How would you like to execute?",
+    id: "start_execution",
+    prompt: "Plan saved to docs/plans/<filename>.md. Start subagent-driven execution now?",
     options: [
-      { label: "Subagent-Driven (this session) - Fresh subagent per task, fast iteration", value: "subagent" },
-      { label: "Executing Plans (separate session) - Batch execution with checkpoints", value: "executing_plans" }
+      { label: "Yes - execute now with subagent-driven-development", value: "yes" },
+      { label: "Not yet - I'll review the plan first", value: "no" }
     ]
   }]
 })
 ```
-
-**If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use /skill:subagent-driven-development
-- Stay in this session
-- Fresh subagent per task + code review
-- Use dependency graph to parallelize independent AFK tasks
-
-**If Executing Plans chosen:**
-- **REQUIRED SUB-SKILL:** New session uses /skill:executing-plans
