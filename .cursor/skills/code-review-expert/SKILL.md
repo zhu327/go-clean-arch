@@ -224,25 +224,18 @@ Do not flood the review with low-value nits if there are larger structural issue
 
 ### 10) Next steps confirmation
 
-**When invoked directly by user** (not as part of a subagent pipeline), use `AskQuestion`:
+**When invoked directly by user** (not as part of a subagent pipeline), ask in chat how to proceed with clear choices, for example:
 
 ```
-AskQuestion({
-  title: "Code Review Next Steps",
-  questions: [{
-    id: "next_action",
-    prompt: "I found X issues (P0: _, P1: _, P2: _, P3: _). How would you like to proceed?",
-    options: [
-      { id: "fix_all", label: "Fix all - Implement all suggested fixes" },
-      { id: "fix_critical", label: "Fix P0/P1 only - Address critical and high priority issues" },
-      { id: "fix_specific", label: "Fix specific items - I'll tell you which" },
-      { id: "no_changes", label: "No changes - Review complete" }
-    ]
-  }]
-})
+I found X issues (P0: _, P1: _, P2: _, P3: _). How would you like to proceed?
+
+A) Fix all — Implement all suggested fixes
+B) Fix P0/P1 only — Address critical and high priority issues
+C) Fix specific items — I'll tell you which
+D) No changes — Review complete
 ```
 
-**When loaded by `code-reviewer` agent (subagent context):** Skip AskQuestion — return findings to caller.
+**When loaded by `code-reviewer` agent (subagent context):** Skip the next-steps prompt — return findings to caller.
 
 **Important**: Do NOT implement any changes until explicitly confirmed. This is a review-first workflow.
 

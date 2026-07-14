@@ -82,7 +82,7 @@ Do NOT propose interfaces yet. After the report is presented, ask the user: "Whi
 
 Once the user picks a candidate, drop into a grilling conversation. Walk the design tree with them — constraints, dependencies, the shape of the deepened module, what sits behind the seam, what tests survive.
 
-Use the `AskQuestion` tool to present design choices as structured options when appropriate.
+Present design choices as structured lettered/numbered options in chat when appropriate.
 
 Side effects happen inline as decisions crystallize:
 

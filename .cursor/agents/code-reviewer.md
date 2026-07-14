@@ -146,6 +146,6 @@ Use `code-review-expert`'s findings format for the body of your review (P0–P3 
 
 ## Returning Results
 
-This agent is typically dispatched as a subagent. Return your findings in the structured output format above. Do NOT use AskQuestion or attempt to interact with the user — return your complete assessment to the caller (parent agent) who will decide next steps. (code-review-expert's `AskQuestion` next-step prompt is for direct user invocation only — skip it in subagent context.)
+This agent is typically dispatched as a subagent. Return your findings in the structured output format above. Do NOT attempt to interact with the user — return your complete assessment to the caller (parent agent) who will decide next steps. (code-review-expert's next-step confirmation prompt is for direct user invocation only — skip it in subagent context.)
 
 **Do NOT implement any changes.** Your job is review only — the caller handles fixes.

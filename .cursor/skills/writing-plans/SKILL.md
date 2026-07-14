@@ -256,18 +256,11 @@ After saving the plan, hand off to `subagent-driven-development` for execution i
 - Fresh subagent per task, wave-parallel execution using the dependency graph
 - Spec-compliance review gate per task; global architecture/quality review at the end
 
-Within the `/go` pipeline this handoff is automatic (no confirmation). When running `writing-plans` standalone, confirm with the user before starting execution:
+Within the `/go` pipeline this handoff is automatic (no confirmation). When running `writing-plans` standalone, confirm with the user before starting execution — ask in chat with clear choices, for example:
 
 ```
-AskQuestion({
-  title: "开始执行",
-  questions: [{
-    id: "start_execution",
-    prompt: "Plan saved to docs/plans/<filename>.md. Start subagent-driven execution now?",
-    options: [
-      { id: "yes", label: "Yes - execute now with subagent-driven-development" },
-      { id: "no", label: "Not yet - I'll review the plan first" }
-    ]
-  }]
-})
+Plan saved to docs/plans/<filename>.md. Start subagent-driven execution now?
+
+A) Yes — execute now with subagent-driven-development
+B) Not yet — I'll review the plan first
 ```
