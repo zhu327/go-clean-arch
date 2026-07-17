@@ -77,8 +77,8 @@ User: "ServiceNow"
 
 ═══ Final Review ═══
 
-[Dispatch code-reviewer for entire implementation — global architecture/quality pass]
-Final reviewer: Architecture and code quality look good; one code-judo simplification suggested.
+[Dispatch generalPurpose + spec-reviewer-prompt for entire implementation]
+Final spec reviewer: ✅ Spec compliant across the whole feature.
 Ready to merge.
 
 Done! 5 tasks × 2 waves. Max 3 parallel agents. 
@@ -178,7 +178,7 @@ You: Plan has no dependency graph — falling back to sequential execution.
 [Controller checklist: all tasks done, all spec reviews passed, all validations passed]
 
 ═══ Final Review ═══
-[Dispatch code-reviewer for the entire implementation — global architecture/quality pass]
+[Dispatch generalPurpose + spec-reviewer-prompt for the entire implementation]
 
 Done! 3 tasks, sequential. No parallelism, but the same correctness guarantees:
 per-task spec review + per-task validation + acceptance audit + global review.

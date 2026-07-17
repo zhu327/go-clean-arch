@@ -1,7 +1,6 @@
 ---
 name: e2e-testing
 description: Use when writing or updating kfinops end-to-end HTTP API tests backed by httpexpect and testcontainers. Trigger for E2E/end-to-end/integration coverage of new or changed API endpoints, not for unit-only handler tests.
-disable-model-invocation: true
 ---
 
 # E2E API Testing

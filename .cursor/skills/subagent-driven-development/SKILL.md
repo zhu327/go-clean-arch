@@ -1,14 +1,13 @@
 ---
 name: subagent-driven-development
 description: Execute implementation plans by dispatching subagents per task with dependency-aware parallel scheduling. Use when writing-plans or /go hands off a plan for same-session execution with wave-parallel subagents.
-disable-model-invocation: true
 ---
 
 # Subagent-Driven Development
 
-Execute plan by dispatching subagents per task with **dependency-aware parallel scheduling**. Tasks without mutual dependencies run concurrently in waves. Each task gets a spec-compliance review gate (does it build, do tests pass, does it meet the task's acceptance criteria). Architecture and code-quality are reviewed once, globally, after all waves — not per task.
+Execute plan by dispatching subagents per task with **dependency-aware parallel scheduling**. Tasks without mutual dependencies run concurrently in waves. Each task gets a spec-compliance review gate (does it build, do tests pass, does it meet the task's acceptance criteria). After all waves, one final whole-feature spec-compliance review runs using the same prompt template.
 
-**Core principle:** Dependency graph drives parallelism. Fresh subagent per task. Spec-compliance review gate per task (functional correctness). Global quality review at the end. Maximum concurrency within safety bounds.
+**Core principle:** Dependency graph drives parallelism. Fresh subagent per task. Spec-compliance review gate per task (functional correctness). Final whole-feature spec review at the end. Maximum concurrency within safety bounds.
 
 ## When to Use
 
@@ -49,7 +48,7 @@ Phase 2: Execute Waves (repeat per wave)
 Phase 3: Final Feature Acceptance Audit
   │
   ▼
-Phase 4: Dispatch code-reviewer for entire implementation
+Phase 4: Dispatch generalPurpose + spec-reviewer-prompt for entire implementation
 ```
 
 ## Phase 1: Parse Plan & Build Schedule
@@ -147,7 +146,7 @@ Task("Review spec compliance for Task 2")  // Reviewer B
 Task("Review spec compliance for Task 3")  // Reviewer C
 ```
 
-The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, in Phase 4. Use the `./spec-reviewer-prompt.md` template.
+The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. Architecture/code-quality nits are out of scope unless they create a correctness or spec-compliance problem. Use the `./spec-reviewer-prompt.md` template with a `generalPurpose` (default) subagent — **never** the `code-reviewer` subagent.
 
 ### Step 5: Fix Spec Issues
 
@@ -187,11 +186,17 @@ Checklist:
 - All cross-wave public interfaces/contracts are consistent; when in doubt, read the actual source of downstream dependencies and compare against the plan's Interface Contracts
 - Any deviation from the approved requirements/design is documented and explicitly approved
 
-If any item fails, fix or escalate before global code review. Do not send an incomplete feature to `code-reviewer`.
+If any item fails, fix or escalate before the final review. Do not start Phase 4 on an incomplete feature.
 
 ## Phase 4: Final Review
 
-After the acceptance audit passes, dispatch `code-reviewer` subagent for the entire implementation (all files changed across all waves). This is the single, global architecture/code-quality pass — functional correctness should already have been checked by per-task spec reviews, wave validation, and the acceptance audit. The reviewer focuses on SOLID, security, and code-judo simplification opportunities, while still flagging obvious correctness bugs noticed during review.
+After the acceptance audit passes, dispatch a **`generalPurpose` (default) subagent** using the `./spec-reviewer-prompt.md` template for the entire implementation (whole plan requirements + all files changed across all waves). **Do NOT** use the `code-reviewer` Task subagent.
+
+Fill the prompt with:
+- **What Was Requested:** the approved goal/requirements and full plan task text (not a single task)
+- **What Implementer Claims They Built:** the collected implementer reports from all waves
+
+This is a final whole-feature spec-compliance pass — same gate as per-task reviews, broader scope. Fix any ❌ issues (resume implementers or dispatch a fix subagent) and re-review until ✅.
 
 ## File Conflict Safety
 
@@ -280,6 +285,7 @@ If the plan has **no dependency graph** or all tasks share files:
 - Let implementer self-review replace the spec review (both are needed)
 - Move to next task/wave while the spec review has open issues
 - **Start next wave before current wave fully completes** (dependency violation)
+- **Dispatch the `code-reviewer` Task subagent** for any review — always use `generalPurpose` + `./spec-reviewer-prompt.md` instead
 
 **If subagent asks questions:**
 - Answer clearly and completely
@@ -320,10 +326,10 @@ If the plan has **no dependency graph** or all tasks share files:
 - Per-task spec review verifies functional correctness (builds, tests pass, acceptance criteria met)
 - Review loops ensure fixes actually work
 - Spec compliance prevents over/under-building
-- One global architecture/quality review (Phase 4) catches cross-cutting issues without per-task overhead
+- One final whole-feature spec review (Phase 4) catches cross-task gaps without a separate review agent type
 
 **Cost:**
-- One implementer + one spec reviewer per task (plus the single final code-reviewer)
+- One implementer + one spec reviewer per task (plus one final whole-feature spec review)
 - Controller does more prep work (parsing DAG, computing waves, checking file conflicts)
 - Spec review loops add iterations
 - But catches functional issues early (cheaper than debugging later)
@@ -339,7 +345,7 @@ If the plan has **no dependency graph** or all tasks share files:
 - `e2e-testing` — Subagents add E2E tests when implementing API endpoints (E2E tests are planned as tasks, not a separate gate)
 
 **Final review:**
-- `code-reviewer` agent — Dispatched once in Phase 4 for the global architecture/quality pass (it loads `code-review-expert` internally)
+- `generalPurpose` + `./spec-reviewer-prompt.md` — Dispatched once in Phase 4 for whole-feature spec compliance (do not use the `code-reviewer` agent)
 
 **Related workflows:**
 - Ad-hoc parallel dispatch — For concurrent independent problems, simply dispatch multiple Task tool calls in one message (no special skill needed)

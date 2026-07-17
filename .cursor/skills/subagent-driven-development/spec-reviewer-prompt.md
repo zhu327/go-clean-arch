@@ -1,22 +1,24 @@
 # Spec Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent.
+Use this template when dispatching a spec compliance reviewer subagent (`generalPurpose` / default). Use it for both per-task reviews and the Phase 4 whole-feature final review. **Never** use the `code-reviewer` Task subagent.
 
-**Purpose:** Verify the implementer built what was requested — nothing more, nothing less — and that it actually works (builds, tests pass, acceptance criteria met). This is the sole per-task **spec-compliance gate** in subagent-driven-development. Architecture and code-quality are reviewed separately and globally afterward (final review, via the `code-reviewer` agent), so they are explicitly OUT OF SCOPE here. Focus only on functional correctness and spec conformance.
+**Purpose:** Verify the implementer built what was requested — nothing more, nothing less — and that it actually works (builds, tests pass, acceptance criteria met). Architecture and code-quality (naming, SOLID, style, abstraction) are OUT OF SCOPE unless they create a correctness or spec-compliance problem. Focus only on functional correctness and spec conformance.
 
 ```
 Task tool (generalPurpose):
-  description: "Review spec compliance for Task N"
+  description: "Review spec compliance for Task N"  # or "Final spec review for entire implementation"
   prompt: |
     You are reviewing whether an implementation matches its specification.
 
     ## What Was Requested
 
     [FULL TEXT of task requirements]
+    # Phase 4: use approved goal/requirements + full plan task text instead of a single task
 
     ## What Implementer Claims They Built
 
     [From implementer's report]
+    # Phase 4: paste collected implementer reports from all waves
 
     ## CRITICAL: Do Not Trust the Report
 
@@ -38,8 +40,7 @@ Task tool (generalPurpose):
 
     You read the implementation code for ONE reason only: to verify the implementer built the
     requested behavior correctly. You are NOT evaluating code quality — naming, structure,
-    style, abstraction quality, SOLID, performance, security are all out of scope here. Those
-    are handled once, globally, by a separate code-reviewer agent after all waves finish. If
+    style, abstraction quality, SOLID, performance, security are all out of scope here. If
     you notice a code-quality nit while reading, ignore it unless it creates a correctness or
     spec-compliance problem.
 
@@ -58,7 +59,7 @@ Task tool (generalPurpose):
 
     Only flag over-engineering when it affects scope, observable behavior, public API/contracts,
     dependencies, file ownership, testability of the acceptance criteria, or correctness. Do NOT
-    flag purely internal style/structure choices here; the global code-reviewer owns those.
+    flag purely internal style/structure choices here.
 
     **Functional correctness & tests:**
     - Do the tests they claim actually exist, and do they test real behavior (not just mock interactions)?

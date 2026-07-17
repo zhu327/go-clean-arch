@@ -1,7 +1,6 @@
 ---
 name: subagent-driven-development
 description: Use when executing a written implementation plan in the current session. Dispatches implementation subagents per task with dependency-aware wave parallelism, file-conflict checks, spec review, code-quality review, and validation.
-disable-model-invocation: true
 ---
 
 # Subagent-Driven Development
@@ -155,14 +154,16 @@ As subagents complete, collect their reports. Wait for ALL implementers in the w
 ```json
 {
   "tasks": [
-    { "agent": "code-reviewer", "task": "Review spec compliance for Task 1\n\n[requirements + implementer report]" },
-    { "agent": "code-reviewer", "task": "Review spec compliance for Task 2\n\n[requirements + implementer report]" },
-    { "agent": "code-reviewer", "task": "Review spec compliance for Task 3\n\n[requirements + implementer report]" }
+    { "task": "Review spec compliance for Task 1\n\n[requirements + implementer report]" },
+    { "task": "Review spec compliance for Task 2\n\n[requirements + implementer report]" },
+    { "task": "Review spec compliance for Task 3\n\n[requirements + implementer report]" }
   ]
 }
 ```
 
 The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, after all waves. Use the `./spec-reviewer-prompt.md` template.
+
+**Which agent:** Dispatch the **default subagent** (omit the `agent` field) with the `./spec-reviewer-prompt.md` template — NOT `code-reviewer`. `code-reviewer` is bound to the `code-review-expert` skill and is reserved for the global architecture/quality review in Phase 4; its prompt explicitly does not perform spec/requirements audits, so it is the wrong agent here.
 
 ### Step 5: Fix Spec Issues
 
