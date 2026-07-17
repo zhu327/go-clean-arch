@@ -136,7 +136,7 @@ HITL tasks need human decisions before agent can proceed:
 ```
 All three run concurrently. Add `"agent": "worker"` only when a suitable implementation agent exists.
 
-**Note:** If no `worker` implementation agent is configured, omit the `agent` field to use the default subagent. Do not use `code-reviewer` for implementation; it is review-only.
+**Note:** If no `worker` implementation agent is configured, omit the `agent` field to use the default subagent.
 
 Each subagent gets:
 - Full task text from plan (never make subagent read plan file)
@@ -163,7 +163,7 @@ As subagents complete, collect their reports. Wait for ALL implementers in the w
 
 The spec reviewer verifies functional correctness only: did the implementer build what the task asked for (nothing more, nothing less), are the acceptance criteria met, and do the claimed tests actually exist and pass. It does NOT do architecture/quality review — that happens once, globally, after all waves. Use the `./spec-reviewer-prompt.md` template.
 
-**Which agent:** Dispatch the **default subagent** (omit the `agent` field) with the `./spec-reviewer-prompt.md` template — NOT `code-reviewer`. `code-reviewer` is bound to the `code-review-expert` skill and is reserved for the global architecture/quality review in Phase 4; its prompt explicitly does not perform spec/requirements audits, so it is the wrong agent here.
+**Which agent:** Dispatch a **general-purpose** subagent with the `./spec-reviewer-prompt.md` template.
 
 ### Step 5: Fix Spec Issues
 

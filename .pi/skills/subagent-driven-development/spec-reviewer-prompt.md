@@ -4,7 +4,7 @@ Use this template when dispatching a spec compliance reviewer subagent.
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
-**Which agent:** Dispatch the **default subagent** (omit the `agent` field). Do NOT use `code-reviewer` — it is bound to the `code-review-expert` skill (architecture/quality) and explicitly does not perform spec audits.
+**Which agent:** Dispatch a **general-purpose** subagent.
 
 ```json
 {
