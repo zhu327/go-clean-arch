@@ -8,7 +8,30 @@ disable-model-invocation: true
 
 Build features end-to-end with one automatic pipeline: design first, then implementation, then review, and cleanup.
 
-## Flow
+## Complexity Gate
+
+After brainstorming approval, assess the task scope before choosing a path:
+
+| Criteria | Fast Track | Full Pipeline |
+|----------|-----------|---------------|
+| Files touched | 1–3 | 4+ |
+| Layers affected | 1–2 | 3+ (cross-layer) |
+| New domain/module | No | Yes |
+| Architecture decision | No | Yes |
+| Estimated tasks | 1–2 | 3+ |
+
+**Fast Track** (small changes, bug fixes, single-slice features):
+1. Skip `writing-plans` and `subagent-driven-development`
+2. Implement directly using TDD (read and follow `test-driven-development` skill)
+3. Run validation: `go build ./...`, `go test ./...`, `go vet ./...`
+4. Dispatch `code-reviewer` subagent for the change
+
+**Full Pipeline** (multi-task features, new modules, cross-cutting changes):
+Follow the full 5-step flow below.
+
+---
+
+## Flow (Full Pipeline)
 
 1. Read and follow `brainstorming` skill — only in this step you must confirm requirements with the user.
 2. After the user approves the design, continue automatically with `writing-plans` skill. If the change adds/modifies API endpoints, the plan MUST include E2E test tasks (E2E is a planned task, not a separate gate) and a completed Plan Coverage Checklist.
@@ -28,16 +51,18 @@ Build features end-to-end with one automatic pipeline: design first, then implem
 
 ## Invocation behavior
 
-- Do not ask for human confirmation between steps 2~5.
+- Do not ask for human confirmation between steps 2~5 (Full Pipeline) or during the Fast Track.
 - If the user provides a task summary with `/go`, pass it into `brainstorming` as the starting context.
-- If `brainstorming` identifies missing context, ask follow-up questions and wait for clarification before moving to implementation planning.
+- If `brainstorming` identifies missing context, ask follow-up questions and wait for clarification before moving forward.
+- The complexity gate is assessed by you after brainstorming — do not ask the user which track to use unless truly ambiguous.
 - If there are implementation blockers during execution, stop and ask for resolution instead of guessing.
 
 ---
 
 ## Validation Hooks
 
-- After `subagent-driven-development` completes each wave, run available validation if applicable:
+- **Fast Track:** After implementation, run `go build ./...`, `go test ./...`, `go vet ./...` before dispatching code-reviewer.
+- **Full Pipeline:** After `subagent-driven-development` completes each wave, run available validation if applicable:
   - Compilation / build checks (e.g. `go build ./...`)
   - Unit tests (e.g. `go test ./...`)
   - Static analysis / linting (e.g. `go vet ./...`)

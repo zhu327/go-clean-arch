@@ -1,7 +1,6 @@
 ---
 name: e2e-testing
 description: Write E2E API tests using httpexpect and testcontainers for kfinops. Use when adding E2E tests, covering new API endpoints, or when user mentions E2E, end-to-end, integration testing, or API testing.
-disable-model-invocation: true
 ---
 
 # E2E API Testing

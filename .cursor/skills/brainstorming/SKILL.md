@@ -13,11 +13,11 @@ Start by understanding the current project context, then ask questions to refine
 
 ## The Process
 
-**IMPORTANT:** Use the `AskQuestion` tool for all questions - provide structured options instead of asking in plain text.
+**IMPORTANT:** Ask questions in chat with structured options (lettered/numbered choices). Prefer multiple choice over open-ended when possible — do not invent a non-existent question tool.
 
 **Understanding the idea:**
 - Check out the current project state first (files, docs, recent commits)
-- Ask related questions together in one `AskQuestion` call (2-5 per batch), split only when answers have dependencies
+- Batch related questions together (2-5 per message), split only when answers have dependencies
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Focus on understanding: purpose, constraints, success criteria
 
@@ -44,8 +44,8 @@ Start by understanding the current project context, then ask questions to refine
 
 ## Key Principles
 
-- **Use AskQuestion tool** - Use structured questions instead of plain text
-- **Batch related questions** - Ask related questions together (2-5 per batch), split only when answers have dependencies
+- **Structured options in chat** - Present lettered/numbered choices; avoid vague open prompts when a short option list works
+- **Batch related questions** - Ask related questions together (2-5 per message), split only when answers have dependencies
 - **Multiple choice preferred** - Easier to answer than open-ended when possible
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling

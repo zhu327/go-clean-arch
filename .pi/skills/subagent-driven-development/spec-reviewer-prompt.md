@@ -4,9 +4,10 @@ Use this template when dispatching a spec compliance reviewer subagent.
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
+**Which agent:** Dispatch a **general-purpose** subagent.
+
 ```json
 {
-  "agent": "code-reviewer",
   "task": "Review spec compliance for Task N\n\nYou are reviewing whether an implementation matches its specification."
 }
 ```

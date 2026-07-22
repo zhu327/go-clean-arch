@@ -2,6 +2,7 @@
 name: goal-meta
 description: |
   Turn vague or complex Codex tasks into strong `/goal` commands with outcome, verification, constraints, boundaries, iteration policy, completion evidence, and pause/block conditions. Use when the user asks for Codex goal instructions, Goal 指令, 目标指令, `/goal` prompts, 中文 Goal 模板, plan-to-goal interviews, success criteria, verification commands, or bounded agent work definitions.
+disable-model-invocation: true
 ---
 
 # Goal Meta
