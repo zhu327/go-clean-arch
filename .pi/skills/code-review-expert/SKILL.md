@@ -1,124 +1,53 @@
 ---
 name: code-review-expert
-description: Expert code review of current git changes with a senior engineer lens. Detects SOLID violations, structural regressions, spaghetti growth, security risks, and proposes actionable improvements. Use when user asks for code review, PR review, or when /go pipeline reaches the review stage.
+description: Expert code review of current git changes with a senior engineer lens. Detects structural regressions, spaghetti growth, security risks, and code-judo simplification opportunities. Use when user asks for code review, PR review, or when a development pipeline reaches the review stage.
 disable-model-invocation: true
 ---
 
 # Code Review Expert
 
-## Overview
+Review-only by default. Do not implement until the user confirms.
 
-Perform a structured review of the current git changes with focus on SOLID, architecture, structural simplification, removal candidates, and security risks. Default to review-only output unless the user asks to implement changes.
+**Philosophy**: Be ambitious about structure. Hunt for **code judo** — restructurings that preserve behavior while *deleting* complexity (not rearranging it). Prefer the solution that feels inevitable in hindsight.
 
-**Review philosophy**: Be ambitious about code structure. Do not merely identify local cleanup opportunities. Actively search for "code judo" moves — restructurings that preserve behavior while making the implementation dramatically simpler, smaller, more direct, and more elegant. Prefer the solution that makes the code feel inevitable in hindsight.
+**Iron Law**: Every P0/P1/P2 finding is **Symptom → Consequence → Remedy**. No consequence = noise. No remedy = complaint.
 
-**Iron Law**: Every P0/P1/P2 finding must follow the structure: **Symptom → Consequence → Remedy**. A finding without a consequence is noise — it tells the author *what* is wrong but not *why it matters*. A finding without a remedy is a complaint, not a review.
+**Severity** (use engineering judgment; do not restate textbook definitions):
+- **P0** — security, data loss, correctness → block merge
+- **P1** — logic error, significant structural/SOLID regression → fix before merge
+- **P2** — maintainability / spaghetti growth → fix or follow-up
+- **P3** — style / naming → optional
 
-## Severity Levels
-
-| Level | Name | Description | Action |
-|-------|------|-------------|--------|
-| **P0** | Critical | Security vulnerability, data loss risk, correctness bug | Must block merge |
-| **P1** | High | Logic error, significant SOLID violation, structural regression, performance regression | Should fix before merge |
-| **P2** | Medium | Code smell, maintainability concern, spaghetti growth, minor SOLID violation | Fix in this PR or create follow-up |
-| **P3** | Low | Style, naming, minor suggestion | Optional improvement |
+Assume standard SOLID, OWASP, concurrency, error-handling, and performance knowledge. Load the refs below only for structural bars, security focus, and false-positive filters.
 
 ## Workflow
 
-### 1) Preflight context
+### 1) Preflight
+- Scope with `git status -sb`, `git diff --stat`, `git diff` (or staged / commit range if asked).
+- Map entry points, ownership boundaries, critical paths (auth, writes, network).
+- Flag any file crossing **1000 lines** after the diff.
+- **Empty diff** → ask staged vs commit range. **>500 lines** → summarize by file, review by module. **Mixed concerns** → group findings by feature.
 
-- Use `git status -sb`, `git diff --stat`, and `git diff` to scope changes.
-- If needed, use the `grep` tool (or `bash` with `git grep`/`grep -r`) to find related modules, usages, and contracts.
-- Identify entry points, ownership boundaries, and critical paths (auth, payments, data writes, network).
-- Check file sizes before and after the diff — flag any file crossing 1000 lines.
+### 2) Structural / code-judo pass
+Load [`references/team-rules.md`](references/team-rules.md). Before checklist thinking, ask: *is there a reframe that makes whole branches, helpers, modes, or layers disappear?* Prefer deleting complexity over polishing it.
 
-**Edge cases:**
-- **No changes**: If `git diff` is empty, inform user and ask if they want to review staged changes or a specific commit range.
-- **Large diff (>500 lines)**: Summarize by file first, then review in batches by module/feature area.
-- **Mixed concerns**: Group findings by logical feature, not just file order.
+### 3) Architecture smells
+Apply SOLID / coupling / DDD judgment from model knowledge. Load [`references/anti-false-positives.md`](references/anti-false-positives.md) before filing architecture findings — skip listed cases. Non-trivial refactors → incremental plan, not big-bang rewrite.
 
-### 2) Structural quality + code-judo analysis
+### 4) Removal candidates
+Safe-delete-now vs defer-with-plan (see team-rules). Evidence: no refs (incl. dynamic), no external consumers, tests/docs updated — or preconditions + migration + rollback if deferred.
 
-Before diving into checklist-driven review, step back and ask the big-picture question:
+### 5) Security
+Load [`references/security-focus.md`](references/security-focus.md). State **exploitability** and **impact**. Skip speculative supply-chain/CVE audits unless the diff changes deps or trust boundaries.
 
-> Is there a "code judo" move that would make this change dramatically simpler?
+### 6) Reliability (diff-visible only)
+Surface issues in the change: swallowed errors, N+1 / hot-path cost, nil/empty/off-by-one, race/TOCTOU, wrong-layer logic. Prefer the project's boundary error type at API edges — do not leak internals to clients.
 
-- Look for opportunities to **reframe** the change so that whole branches, helpers, modes, conditionals, or layers disappear entirely.
-- Do not stop at "this could be a bit cleaner" — push for solutions that **delete complexity** rather than rearrange it.
-- Assume there is often a re-organization that uses the existing architecture more effectively.
-- Load `./references/code-quality-checklist.md` for structural review prompts.
-
-**For every meaningful change, ask:**
-- Can this change be reframed so fewer concepts, branches, or helper layers are needed?
-- Does this improve or worsen the local architecture?
-- Did the diff add branching complexity where a better abstraction should exist?
-- Did a previously cohesive module become more coupled, more stateful, or harder to scan?
-- Is this logic living in the right file and layer?
-- Did this change enlarge a file past a healthy size boundary?
-- Are there repeated conditionals that signal a missing model or missing helper?
-- Is the implementation direct and legible, or does it rely on special cases and incidental control flow?
-- Is this abstraction actually earning its keep, or is it just a wrapper?
-- Is this orchestration more sequential or less atomic than it needs to be?
-
-### 3) SOLID + architecture smells
-
-- Load `./references/solid-checklist.md` for specific prompts.
-- Look for:
-  - **SRP**: Overloaded modules with unrelated responsibilities.
-  - **OCP**: Frequent edits to add behavior instead of extension points.
-  - **LSP**: Subclasses that break expectations or require type checks.
-  - **ISP**: Wide interfaces with unused methods.
-  - **DIP**: High-level logic tied to low-level implementations.
-- When you propose a refactor, explain *why* it improves cohesion/coupling and outline a minimal, safe split.
-- If refactor is non-trivial, propose an incremental plan instead of a large rewrite.
-
-### 4) Removal candidates + iteration plan
-
-- Load `./references/removal-plan.md` for template.
-- Identify code that is unused, redundant, or feature-flagged off.
-- Distinguish **safe delete now** vs **defer with plan**.
-- Provide a follow-up plan with concrete steps and checkpoints (tests/metrics).
-
-### 5) Security and reliability scan
-
-- Load `./references/security-checklist.md` for coverage.
-- Check for:
-  - XSS, injection (SQL/NoSQL/command), SSRF, path traversal
-  - AuthZ/AuthN gaps, missing tenancy checks
-  - Secret leakage or API keys in logs/env/files
-  - Rate limits, unbounded loops, CPU/memory hotspots
-  - Unsafe deserialization, weak crypto, insecure defaults
-  - **Race conditions**: concurrent access, check-then-act, TOCTOU, missing locks
-- Call out both **exploitability** and **impact**.
-
-### 6) Code quality scan
-
-- Load `./references/code-quality-checklist.md` for coverage.
-- Check for:
-  - **Error handling**: swallowed exceptions, overly broad catch, missing error handling, async errors
-  - **Performance**: N+1 queries, CPU-intensive ops in hot paths, missing cache, unbounded memory
-  - **Boundary conditions**: null/undefined handling, empty collections, numeric boundaries, off-by-one
-  - **Structural quality**: file-size explosion, spaghetti growth, abstraction/boundary violations (see checklist)
-- Flag issues that may cause silent failures or production incidents.
-
-### 6.5) Test quality quick check (when diff includes test files)
-
-Skip this section if no test files appear in the diff. This is not a full test audit — only check tests that are part of the current change.
-
-- **Test Obscurity**: test names that don't describe scenario + expected outcome (e.g., `TestUser`, `TestHandler`); multiple assertions with no message string making failures undiagnosable (Assertion Roulette)
-- **Test Brittleness**: tests coupled to implementation details (private method results, internal state) rather than observable behavior; assertions that enforce mock call order or exact parameter values irrelevant to the behavior being tested
-- **Mock Abuse**: mock setup code longer than the test logic itself; primary assertion is `mock.AssertCalled(...)` rather than verifying real behavior occurred; single test using more than 3 mocks
-- **Coverage Illusion**: only happy-path tested for changed production code; error-handling branches, boundary conditions, and exception paths have no corresponding tests
-
-**What Not to Flag:**
-- Multiple assertions are acceptable when they describe one coherent behavior and fail with a clear story
-- A mock around a nondeterministic dependency (time, network, random) is fine if the assertion still verifies behavior
-- Shared test setup is fine when every initialized value is relevant to nearly every test in the group
-- Concise test names are acceptable if scenario and expected outcome are still obvious from context
+### 6.5) Tests (only if test files in the diff)
+Flag: obscure names, assertion roulette, implementation-coupled mocks, happy-path-only coverage illusion.
+Do **not** flag: coherent multi-assert, mocks for nondeterminism, shared setup used by nearly every test, concise-but-obvious names.
 
 ### 7) Output format
-
-Structure your review as follows:
 
 ```markdown
 ## Code Review Summary
@@ -131,100 +60,60 @@ Structure your review as follows:
 ## Findings
 
 ### P0 - Critical
-(none or list)
-
 ### P1 - High
 - **[file:line]** Brief title
-  - Symptom: [exactly what was observed in the code]
-  - Consequence: [what breaks or gets worse if not fixed]
-  - Remedy: [concrete, specific action — prefer code-judo moves]
+  - Symptom: [what was observed]
+  - Consequence: [what breaks or degrades]
+  - Remedy: [concrete action — prefer code-judo]
 
 ### P2 - Medium
-- **[file:line]** Brief title
-  - Symptom: ...
-  - Consequence: ...
-  - Remedy: ...
-
 ### P3 - Low
-(brief description + suggested fix; Consequence may be omitted for minor items)
+(brief; Consequence optional)
 
 ---
 
 ## Structural Simplification Opportunities
-(code-judo moves, missed decompositions, complexity that can be deleted)
-
 ## Removal/Iteration Plan
-(if applicable)
-
 ## Additional Suggestions
-(optional improvements, not blocking)
 ```
 
-**Inline comments**: Use this format for file-specific findings:
+Inline comments:
+
 ```
-::code-comment{file="path/to/file.go" line="42" severity="P1"}
-Symptom: [what was observed]
-Consequence: [what breaks or degrades]
-Remedy: [concrete action]
+::code-comment{file="path/to/file" line="42" severity="P1"}
+Symptom: ...
+Consequence: ...
+Remedy: ...
 ::
 ```
 
-**Clean review**: If no issues found, explicitly state:
-- What was checked
-- Any areas not covered (e.g., "Did not verify database migrations")
-- Residual risks or recommended follow-up tests
+**Clean review**: state what was checked, gaps (e.g. migrations not verified), residual risks.
 
-**Review tone**: Be direct, serious, and demanding about quality. Do not soften major maintainability issues into mild suggestions. If the code is making the codebase messier, say so clearly. If the implementation missed an opportunity for a dramatic simplification, say that clearly too.
-
-Good phrasing examples:
-- `this pushes the file past 1k lines. can we decompose this first?`
-- `this adds another special-case branch into an already busy flow. can we move this behind its own abstraction?`
-- `this works, but it makes the surrounding code more spaghetti. let's keep the behavior and restructure the implementation.`
-- `this feels like feature logic leaking into a shared path. can we isolate it?`
-- `this abstraction seems unnecessary. can we just keep the direct flow?`
-- `i think there's a code-judo move here that makes this much simpler. can we reframe this so these branches disappear?`
-- `this refactor moves complexity around, but doesn't really delete it. is there a way to make the model itself simpler?`
+**Tone**: direct and demanding. Do not soften structural regressions into nits. Call out missed code-judo when a simpler reframe is visible.
 
 ### 8) Approval bar
 
-Do not approve merely because behavior seems correct. The bar for approval is:
+Do not approve merely because behavior seems correct. **Presumptive blockers** unless justified:
+- Clear structural regression or spaghetti growth (ad-hoc branches in shared paths)
+- Visible code-judo path ignored while preserving incidental complexity
+- File pushed across 1000 lines without strong reason
+- Unnecessary wrapper/cast/optionality churn; wrong-layer logic; duplicated canonical helper
+- Architecture-boundary leak
 
-- No clear structural regression
-- No obvious missed opportunity to make the implementation dramatically simpler when such a path is visible
-- No unjustified file-size explosion (especially crossing 1000 lines)
-- No obvious spaghetti-growth from special-case branching
-- No obviously hacky or magical abstraction that makes the code harder to reason about
-- No unnecessary wrapper/cast/optionality churn obscuring the real design
-- No clear architecture-boundary leak or avoidable canonical-helper duplication
-- No missed opportunity for an obvious decomposition that would materially improve maintainability
+### 9) Findings priority
 
-**Presumptive blockers** (treat as blocking unless the author can justify):
-- The PR preserves a lot of incidental complexity when there is a plausible code-judo move that would delete it
-- The PR pushes a file from below 1000 lines to above 1000 lines
-- The PR adds ad-hoc branching that makes an existing flow more tangled
-- The PR solves a local problem by scattering feature checks across shared code
-- The PR adds an unnecessary abstraction, wrapper, or cast-heavy contract that makes the design more indirect
-- The PR duplicates an existing helper or puts logic in the wrong layer when there is a clear canonical home
+1. Structural regressions / missed code-judo
+2. Spaghetti / branching growth
+3. Security
+4. Boundary / abstraction / type-contract
+5. File-size / decomposition
+6. SOLID / performance / legibility
 
-### 9) Findings priority order
+Fewer high-conviction comments > long nit lists.
 
-Prioritize findings in this order:
+### 10) Next steps
 
-1. Structural code-quality regressions
-2. Missed opportunities for dramatic simplification / code-judo restructuring
-3. Spaghetti / branching complexity increases
-4. Security vulnerabilities
-5. Boundary / abstraction / type-contract problems
-6. File-size and decomposition concerns
-7. SOLID violations
-8. Performance issues
-9. Legibility and maintainability concerns
-
-Do not flood the review with low-value nits if there are larger structural issues. Prefer a smaller number of high-conviction comments over a long list of cosmetic notes.
-
-### 10) Next steps confirmation
-
-**When invoked directly by user** (not as part of a subagent pipeline), use `question`:
+**Direct user invoke** — use `question` to ask and wait for confirmation:
 
 ```
 question({
@@ -232,26 +121,21 @@ question({
     id: "next_action",
     prompt: "I found X issues (P0: _, P1: _, P2: _, P3: _). How would you like to proceed?",
     options: [
-      { label: "Fix all - Implement all suggested fixes", value: "fix_all" },
-      { label: "Fix P0/P1 only - Address critical and high priority issues", value: "fix_critical" },
-      { label: "Fix specific items - I'll tell you which", value: "fix_specific" },
-      { label: "No changes - Review complete", value: "no_changes" }
+      { label: "Fix all", value: "fix_all" },
+      { label: "Fix P0/P1 only", value: "fix_critical" },
+      { label: "Fix specific items", value: "fix_specific" },
+      { label: "No changes", value: "no_changes" }
     ]
   }]
 })
 ```
 
-**When loaded by `code-reviewer` agent (subagent context):** Skip `question` — return findings to caller.
-
-**Important**: Do NOT implement any changes until explicitly confirmed. This is a review-first workflow.
+**Subagent / pipeline invoke**: skip the prompt; return findings to caller. Never implement until explicitly confirmed.
 
 ## Resources
 
-### references/
-
 | File | Purpose |
 |------|---------|
-| `solid-checklist.md` | SOLID smell prompts, code-judo remedies, and refactor heuristics |
-| `security-checklist.md` | Web/app security and runtime risk checklist |
-| `code-quality-checklist.md` | Error handling, performance, boundary conditions, structural quality |
-| `removal-plan.md` | Template for deletion candidates and follow-up plan |
+| [`team-rules.md`](references/team-rules.md) | Structural non-negotiables, remedies, removal triage |
+| [`security-focus.md`](references/security-focus.md) | Diff-scoped security escalation |
+| [`anti-false-positives.md`](references/anti-false-positives.md) | Common false positives to skip |
