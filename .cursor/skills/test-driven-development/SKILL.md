@@ -1,210 +1,53 @@
 ---
 name: test-driven-development
-description: Enforce red-green-refactor TDD discipline for all implementation work. Use when implementing new features, fixing bugs, refactoring behavior, or when any production code needs to be written. Ensures no production code without a failing test first.
+description: Use before implementation code for a feature, bug fix, refactor, or behavior change. Enforces red-green-refactor without assuming a language or test framework.
 ---
 
-# Test-Driven Development (TDD)
+# Test-Driven Development
 
-## The Iron Law
+## Iron Law
 
-```
-NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
-```
+**Do not add production behavior before a test demonstrates the missing behavior.**
 
-Write code before the test? **Delete it. Start over.** No keeping as "reference", no adapting.
+Exceptions—generated code, declarative configuration, exploratory prototypes, and changes that cannot be meaningfully tested—require explicit user agreement and a documented alternative verification method.
 
-**Use for:** New features, bug fixes, refactoring, behavior changes.
-**Exceptions (ask human):** Throwaway prototypes, generated code, configuration files.
+## Red → Green → Refactor
 
-## Red-Green-Refactor
+For one behavior at a time (or a closely related batch of at most four):
 
-The default cycle is one test at a time. For closely related behaviors within the same function, **batch mode** is allowed (see below).
+1. **Red:** write the smallest test that describes the desired observable behavior.
+2. **Verify red:** run the project’s focused test command. Confirm it fails because the behavior is missing, not because of setup, syntax, or an unrelated failure.
+3. **Green:** write the smallest production change that makes the test pass.
+4. **Verify green:** rerun the focused test and then the relevant broader suite.
+5. **Refactor:** improve duplication or clarity only while the tests remain green.
 
-### Single-Test Cycle (Default)
-
-```dot
-digraph tdd_cycle {
-    rankdir=LR;
-    red [label="RED\nWrite failing test", shape=box, style=filled, fillcolor="#ffcccc"];
-    verify_red [label="Verify fails\ncorrectly", shape=diamond];
-    green [label="GREEN\nMinimal code", shape=box, style=filled, fillcolor="#ccffcc"];
-    verify_green [label="Verify passes\nAll green", shape=diamond];
-    refactor [label="REFACTOR\nClean up", shape=box, style=filled, fillcolor="#ccccff"];
-    next [label="Next", shape=ellipse];
-
-    red -> verify_red;
-    verify_red -> green [label="yes"];
-    verify_red -> red [label="wrong\nfailure"];
-    green -> verify_green;
-    verify_green -> refactor [label="yes"];
-    verify_green -> green [label="no"];
-    refactor -> verify_green [label="stay\ngreen"];
-    verify_green -> next;
-    next -> red;
-}
-```
-
-### Batch Mode (2–4 Related Tests)
-
-When implementing multiple closely related behaviors for the same function/method (e.g., success case + 2 error cases), you may batch them to reduce round-trips:
-
-1. Write 2–4 related failing tests together
-2. Run once to verify ALL fail for the expected reasons
-3. Implement the code to pass all of them
-4. Run once to verify ALL pass
-5. Refactor
-
-**Batch mode rules:**
-- Tests must target the same function/method
-- Each test must be independently meaningful (clear name, one behavior)
-- If any test fails for an unexpected reason during the RED step, fix it before proceeding
-- Maximum batch size: 4 tests — beyond that, split into groups
-
-### RED — Write Failing Test
-
-One minimal test showing what should happen.
-
-```go
-func TestRetryOperation_RetriesThreeTimes(t *testing.T) {
-    attempts := 0
-    operation := func() (string, error) {
-        attempts++
-        if attempts < 3 {
-            return "", errors.New("fail")
-        }
-        return "success", nil
-    }
-
-    result, err := RetryOperation(operation)
-
-    assert.NoError(t, err)
-    assert.Equal(t, "success", result)
-    assert.Equal(t, 3, attempts)
-}
-```
-
-**Requirements:** One behavior. Clear name (`TestFunctionName_Scenario`). Real code (no mocks unless unavoidable).
-
-### Verify RED — Watch It Fail
-
-**MANDATORY. Never skip.**
-
-```bash
-go test -v ./internal/{domain}/usecase/... -run TestRetryOperation
-```
-
-Confirm: fails (not errors), failure message is expected, fails because feature missing (not typos).
-
-- Test passes? You're testing existing behavior. Fix test.
-- Test errors? Fix error, re-run until it fails correctly.
-
-### GREEN — Minimal Code
-
-Write simplest code to pass the test. Nothing more.
-
-```go
-// RetryOperation 重试操作，最多尝试3次
-func RetryOperation[T any](fn func() (T, error)) (T, error) {
-    var zero T
-    var lastErr error
-    for i := 0; i < 3; i++ {
-        result, err := fn()
-        if err == nil {
-            return result, nil
-        }
-        lastErr = err
-    }
-    return zero, lastErr
-}
-```
-
-Don't add features, refactor other code, or "improve" beyond the test.
-
-### Verify GREEN — Watch It Pass
-
-**MANDATORY.**
-
-```bash
-go test -v ./internal/{domain}/usecase/... -run TestRetryOperation
-make test  # Check for regressions
-```
-
-Confirm: test passes, other tests still pass, output pristine.
-
-- Test fails? Fix code, not test.
-- Other tests fail? Fix now.
-
-### REFACTOR — Clean Up
-
-After green only: remove duplication, improve names, extract helpers. Keep tests green. Don't add behavior.
+Discover test commands from the repository’s package manifest, build scripts, CI, Makefile, or existing test documentation. Never prescribe a runner, path convention, assertion library, or language syntax.
 
 ## Good Tests
 
-| Quality | Good | Bad |
-|---------|------|-----|
-| **Minimal** | One thing. "and" in name? Split it. | `test('validates email and domain and whitespace')` |
-| **Clear** | Name describes behavior | `test('test1')` |
-| **Shows intent** | Demonstrates desired API | Obscures what code should do |
+Tests should:
 
-## Example: Bug Fix
+- describe one externally meaningful behavior with a clear name;
+- assert outcomes, contracts, state changes, or interactions at a genuine seam;
+- use real collaborators when practical and fakes/mocks only where isolation is necessary;
+- cover success, failure, and relevant boundary cases;
+- remain valid through internal refactors.
 
-**Bug:** Empty email accepted
+Avoid tests that only mirror implementation details, rely on order or time, share uncontrolled mutable state, or require production-only test hooks.
 
-**RED**
-```go
-func TestSubmitForm_RejectsEmptyEmail(t *testing.T) {
-    result, err := SubmitForm(context.Background(), &FormData{Email: ""})
-    assert.Nil(t, result)
-    assert.Error(t, err)
-    assert.Equal(t, "email required", err.Error())
-}
-```
+## Debugging and Refactoring
 
-**Verify RED** → `FAIL: expected error "email required", got nil`
+- A bug fix starts with a failing regression test.
+- When a test is difficult to write, first reconsider the interface and dependency shape; do not immediately add test-only public APIs.
+- If a refactor changes behavior, use the same red-green-refactor cycle. Purely mechanical formatting may use existing tests as the safety net.
 
-**GREEN**
-```go
-func SubmitForm(ctx context.Context, data *FormData) (*Result, error) {
-    if strings.TrimSpace(data.Email) == "" {
-        return nil, utils.BadRequestError("email required")
-    }
-    // ...
-}
-```
+## Completion Checklist
 
-**Verify GREEN** → `PASS`
+- [ ] Each new behavior has a test or an explicitly approved alternative verification method.
+- [ ] The new tests were observed failing for the intended reason.
+- [ ] Production changes were minimal and followed the failing test.
+- [ ] Focused and relevant full suites pass.
+- [ ] Edge cases and errors implied by requirements are covered.
+- [ ] The project’s available validation commands pass.
 
-**REFACTOR** → Extract validation for multiple fields if needed.
-
-## Verification Checklist
-
-Before marking work complete:
-
-- [ ] Every new function/method has a test
-- [ ] Watched each test fail before implementing
-- [ ] Each test failed for expected reason (feature missing, not typo)
-- [ ] Wrote minimal code to pass each test
-- [ ] All tests pass
-- [ ] Output pristine (no errors, warnings)
-- [ ] Tests use real code (mocks only if unavoidable)
-- [ ] Edge cases and errors covered
-
-Can't check all boxes? You skipped TDD. Start over.
-
-## When Stuck
-
-| Problem | Solution |
-|---------|----------|
-| Don't know how to test | Write wished-for API. Write assertion first. Ask your human partner. |
-| Test too complicated | Design too complicated. Simplify interface. |
-| Must mock everything | Code too coupled. Use dependency injection. |
-| Test setup huge | Extract helpers. Still complex? Simplify design. |
-
-## Debugging Integration
-
-Bug found? Write failing test reproducing it. Follow TDD cycle. Never fix bugs without a test.
-
-## References
-
-- `./tdd-rationale.md` — Why TDD matters, common rationalizations, red flags
-- `./testing-anti-patterns.md` — Mock pitfalls, test-only methods, incomplete mocks
+For rationale and common test smells, read `tdd-rationale.md` and `testing-anti-patterns.md`.

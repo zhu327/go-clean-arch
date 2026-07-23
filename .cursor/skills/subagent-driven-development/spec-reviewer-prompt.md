@@ -1,80 +1,36 @@
-# Spec Compliance Reviewer Prompt Template
+# Spec-Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent (`generalPurpose` / default). Use it for both per-task reviews and the Phase 4 whole-feature final review. **Never** use the `code-reviewer` Task subagent.
+Use this template for an independent reviewer after an implementer reports completion.
 
-**Purpose:** Verify the implementer built what was requested — nothing more, nothing less — and that it actually works (builds, tests pass, acceptance criteria met). Architecture and code-quality (naming, SOLID, style, abstraction) are OUT OF SCOPE unless they create a correctness or spec-compliance problem. Focus only on functional correctness and spec conformance.
+```markdown
+You are reviewing whether an implementation matches its specification.
 
-```
-Task tool (generalPurpose):
-  description: "Review spec compliance for Task N"  # or "Final spec review for entire implementation"
-  prompt: |
-    You are reviewing whether an implementation matches its specification.
+## What Was Requested
 
-    ## What Was Requested
+[FULL task text: goal, acceptance criteria, file list, contracts, test cases, and validation]
 
-    [FULL TEXT of task requirements]
-    # Phase 4: use approved goal/requirements + full plan task text instead of a single task
+## What the Implementer Reported
 
-    ## What Implementer Claims They Built
+[Implementer report]
 
-    [From implementer's report]
-    # Phase 4: paste collected implementer reports from all waves
+## Verify Independently
 
-    ## CRITICAL: Do Not Trust the Report
+Do not trust the report. Read the changed code and tests, compare them to each acceptance criterion, and run the task’s actual project-derived validation commands where practical.
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
+Review only specification compliance and functional correctness:
 
-    **DO NOT:**
-    - Take their word for what they implemented
-    - Trust their claims about completeness
-    - Accept their interpretation of requirements
+- Was every requested observable behavior implemented?
+- Are required errors, edge cases, public contracts, and side effects correct?
+- Do the claimed tests exist, exercise behavior rather than only implementation details, and pass?
+- Did the implementation change files, dependencies, public contracts, or behavior outside the approved task?
+- Did it add unsupported features or solve a different problem?
 
-    **DO:**
-    - Read the actual code they wrote
-    - Compare actual implementation to requirements line by line
-    - Check for missing pieces they claimed to implement
-    - Look for extra features they didn't mention
+Architecture, style, naming, and broad maintainability concerns are outside this review unless they cause a correctness or scope violation; the global `code-reviewer` handles those concerns.
 
-    ## Your Job
+## Report
 
-    You read the implementation code for ONE reason only: to verify the implementer built the
-    requested behavior correctly. You are NOT evaluating code quality — naming, structure,
-    style, abstraction quality, SOLID, performance, security are all out of scope here. If
-    you notice a code-quality nit while reading, ignore it unless it creates a correctness or
-    spec-compliance problem.
+Return one of:
 
-    Read the implementation code and verify:
-
-    **Missing requirements:**
-    - Did they implement everything that was requested?
-    - Are there requirements they skipped or missed?
-    - Did they claim something works but didn't actually implement it?
-    - Is every Acceptance Criterion in the task actually covered by code AND by a test?
-
-    **Extra/unneeded work:**
-    - Did they build things that weren't requested?
-    - Did they add "nice to haves" that weren't in spec?
-    - Did they change public contracts, observable behavior, dependencies, or files beyond the task without being asked?
-
-    Only flag over-engineering when it affects scope, observable behavior, public API/contracts,
-    dependencies, file ownership, testability of the acceptance criteria, or correctness. Do NOT
-    flag purely internal style/structure choices here.
-
-    **Functional correctness & tests:**
-    - Do the tests they claim actually exist, and do they test real behavior (not just mock interactions)?
-    - Run the task's tests yourself: `go test ./<task-package>/...` — do they actually pass?
-    - Are there obvious missing test cases for the acceptance criteria (edge cases, error paths)?
-    - Does the code compile? (`go build ./...`)
-
-    **Misunderstandings:**
-    - Did they interpret requirements differently than intended?
-    - Did they solve the wrong problem?
-    - Did they implement the right feature with the wrong observable behavior or wrong public contract?
-
-    **Verify by reading code and running tests, not by trusting report.**
-
-    Report:
-    - ✅ Spec compliant (acceptance criteria met, tests exist and pass, no missing/extra work)
-    - ❌ Issues found: [list specifically what's missing, extra, or failing — with file:line references and the failing test output]
+- ✅ **Spec compliant:** acceptance criteria are met and relevant validation passes.
+- ❌ **Issues found:** for each issue, include the requirement, evidence (`file:line` or command output), consequence, and required correction.
 ```

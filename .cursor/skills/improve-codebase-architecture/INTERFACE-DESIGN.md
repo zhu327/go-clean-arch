@@ -1,44 +1,36 @@
 # Interface Design
 
-When the user wants to explore alternative interfaces for a chosen deepening candidate, use this parallel sub-agent pattern. Based on "Design It Twice" (Ousterhout) — your first idea is unlikely to be the best.
+Use this process when the user wants to compare alternative interfaces for a selected deepening candidate. It follows “design it twice”: the first plausible interface is rarely the only useful one.
 
-Uses the vocabulary in [LANGUAGE.md](LANGUAGE.md) — **module**, **interface**, **seam**, **adapter**, **leverage**.
+Use the vocabulary from [LANGUAGE.md](LANGUAGE.md): module, interface, seam, adapter, leverage, and locality.
 
-## Process
+## 1. Frame the Problem
 
-### 1. Frame the problem space
+Before dispatching subagents, explain:
 
-Before spawning sub-agents, write a user-facing explanation of the problem space for the chosen candidate:
+- the constraints every interface must satisfy;
+- the dependencies and their categories from [DEEPENING.md](DEEPENING.md);
+- a small illustrative sketch in the project’s actual language or notation.
 
-- The constraints any new interface would need to satisfy
-- The dependencies it would rely on, and which category they fall into (see [DEEPENING.md](DEEPENING.md))
-- A rough illustrative code sketch to ground the constraints — not a proposal, just a way to make the constraints concrete
+This is context, not a proposed solution.
 
-Show this to the user, then immediately proceed to Step 2. The user reads and thinks while the sub-agents work in parallel.
+## 2. Explore Alternatives
 
-### 2. Spawn sub-agents
+Dispatch at least three read-only design subagents in parallel. Give each a concrete brief with relevant files, coupling details, dependency categories, existing project conventions, and a distinct objective:
 
-Spawn 3+ sub-agents in parallel using the Agent tool. Each must produce a **radically different** interface for the deepened module.
+1. minimize the interface and maximize leverage per entry point;
+2. optimize for extension and variation;
+3. optimize for the most common caller;
+4. when remote or external dependencies matter, design the port-and-adapter strategy.
 
-Prompt each sub-agent with a separate technical brief (file paths, coupling details, dependency category from [DEEPENING.md](DEEPENING.md), what sits behind the seam). The brief is independent of the user-facing problem-space explanation in Step 1. Give each agent a different design constraint:
+Each subagent returns:
 
-- Agent 1: "Minimize the interface — aim for 1–3 entry points max. Maximise leverage per entry point."
-- Agent 2: "Maximise flexibility — support many use cases and extension."
-- Agent 3: "Optimise for the most common caller — make the default case trivial."
-- Agent 4 (if applicable): "Design around ports & adapters for cross-seam dependencies."
+1. the interface, including invariants, ordering, error modes, and configuration requirements;
+2. an example of caller usage in the project’s language or notation;
+3. what the implementation hides behind the seam;
+4. the dependency and adapter strategy;
+5. trade-offs in leverage, locality, and complexity.
 
-Include both [LANGUAGE.md](LANGUAGE.md) vocabulary and the project's `.cursor/rules/` conventions in the brief so each sub-agent names things consistently with the architecture language and the project's domain language.
+## 3. Compare
 
-Each sub-agent outputs:
-
-1. Interface (types, methods, params — plus invariants, ordering, error modes)
-2. Usage example showing how callers use it
-3. What the implementation hides behind the seam
-4. Dependency strategy and adapters (see [DEEPENING.md](DEEPENING.md))
-5. Trade-offs — where leverage is high, where it's thin
-
-### 3. Present and compare
-
-Present designs sequentially so the user can absorb each one, then compare them in prose. Contrast by **depth** (leverage at the interface), **locality** (where change concentrates), and **seam placement**.
-
-After comparing, give your own recommendation: which design you think is strongest and why. If elements from different designs would combine well, propose a hybrid. Be opinionated — the user wants a strong read, not a menu.
+Present alternatives sequentially, then compare depth, locality, seam placement, extension cost, and testability. Recommend one design—or a deliberate hybrid—with reasons. Do not select a design merely because it introduces more abstractions.

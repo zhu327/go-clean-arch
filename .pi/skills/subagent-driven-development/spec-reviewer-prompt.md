@@ -1,68 +1,36 @@
-# Spec Compliance Reviewer Prompt Template
+# Spec-Compliance Reviewer Prompt Template
 
-Use this template when dispatching a spec compliance reviewer subagent.
-
-**Purpose:** Verify implementer built what was requested (nothing more, nothing less)
-
-**Which agent:** Dispatch a **general-purpose** subagent.
-
-```json
-{
-  "task": "Review spec compliance for Task N\n\nYou are reviewing whether an implementation matches its specification."
-}
-```
-
-Task body to include:
+Use this template for an independent reviewer after an implementer reports completion.
 
 ```markdown
 You are reviewing whether an implementation matches its specification.
 
-    ## What Was Requested
+## What Was Requested
 
-    [FULL TEXT of task requirements]
+[FULL task text: goal, acceptance criteria, file list, contracts, test cases, and validation]
 
-    ## What Implementer Claims They Built
+## What the Implementer Reported
 
-    [From implementer's report]
+[Implementer report]
 
-    ## CRITICAL: Do Not Trust the Report
+## Verify Independently
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
+Do not trust the report. Read the changed code and tests, compare them to each acceptance criterion, and run the task’s actual project-derived validation commands where practical.
 
-    **DO NOT:**
-    - Take their word for what they implemented
-    - Trust their claims about completeness
-    - Accept their interpretation of requirements
+Review only specification compliance and functional correctness:
 
-    **DO:**
-    - Read the actual code they wrote
-    - Compare actual implementation to requirements line by line
-    - Check for missing pieces they claimed to implement
-    - Look for extra features they didn't mention
+- Was every requested observable behavior implemented?
+- Are required errors, edge cases, public contracts, and side effects correct?
+- Do the claimed tests exist, exercise behavior rather than only implementation details, and pass?
+- Did the implementation change files, dependencies, public contracts, or behavior outside the approved task?
+- Did it add unsupported features or solve a different problem?
 
-    ## Your Job
+Architecture, style, naming, and broad maintainability concerns are outside this review unless they cause a correctness or scope violation; the global `code-reviewer` handles those concerns.
 
-    Read the implementation code and verify:
+## Report
 
-    **Missing requirements:**
-    - Did they implement everything that was requested?
-    - Are there requirements they skipped or missed?
-    - Did they claim something works but didn't actually implement it?
+Return one of:
 
-    **Extra/unneeded work:**
-    - Did they build things that weren't requested?
-    - Did they over-engineer or add unnecessary features?
-    - Did they add "nice to haves" that weren't in spec?
-
-    **Misunderstandings:**
-    - Did they interpret requirements differently than intended?
-    - Did they solve the wrong problem?
-    - Did they implement the right feature but wrong way?
-
-    **Verify by reading code, not by trusting report.**
-
-    Report:
-    - ✅ Spec compliant (if everything matches after code inspection)
-    - ❌ Issues found: [list specifically what's missing or extra, with file:line references]
+- ✅ **Spec compliant:** acceptance criteria are met and relevant validation passes.
+- ❌ **Issues found:** for each issue, include the requirement, evidence (`file:line` or command output), consequence, and required correction.
 ```

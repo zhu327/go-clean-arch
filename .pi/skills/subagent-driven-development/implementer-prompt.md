@@ -1,137 +1,73 @@
 # Implementer Subagent Prompt Template
 
-Use this template when dispatching an implementer subagent.
-
-## Standard (Sequential or Single Task)
-
-```json
-{
-  "task": "You are implementing Task N: [task name]\n\n## Task Description\n\n[FULL TEXT of task from plan - paste it here, don't make subagent read file]\n\n## Context\n\n[Scene-setting: where this fits, dependencies, architectural context]"
-}
-```
-
-Task body to include:
+Use this template when dispatching an implementer.
 
 ```markdown
-You are implementing Task N: [task name]
+You are implementing Task N: [task name].
 
-    ## Task Description
+## Task Description
 
-    [FULL TEXT of task from plan - paste it here, don't make subagent read file]
+[FULL text of the approved task. Do not ask the implementer to rediscover the plan.]
 
-    ## Context
+## Context
 
-    [Scene-setting: where this fits, dependencies, architectural context]
+[Where this fits, completed dependencies, and relevant project conventions]
 
-    ## Before You Begin
+## Before You Begin
 
-    If you have questions about:
-    - The requirements or acceptance criteria
-    - The approach or implementation strategy
-    - Dependencies or assumptions
-    - Anything unclear in the task description
+If requirements, acceptance criteria, dependencies, assumptions, or the implementation approach are unclear, ask before changing files. Do not guess.
 
-    **Ask them now.** Raise any concerns before starting work.
+## Your Job
 
-    ## Your Job
+Follow `test-driven-development`:
 
-    Once you're clear on requirements, follow /skill:test-driven-development:
-    1. Write a failing test (RED)
-    2. Write minimal code to pass (GREEN)
-    3. Refactor if needed
-    4. Repeat for each behavior in the task
-    5. Self-review (see below)
-    6. Report back
+1. write a failing test for each behavior;
+2. verify it fails for the expected reason using the project’s focused test command;
+3. make the minimal change to pass;
+4. rerun focused and relevant broader validation;
+5. refactor only while tests remain green.
 
-    Work from: [directory]
+Work only in: [allowed file list].
 
-    **While you work:** If you encounter something unexpected or unclear, **ask questions**.
-    It's always OK to pause and clarify. Don't guess or make assumptions.
+## Before Reporting
 
-    ## Before Reporting Back: Self-Review
+Check:
 
-    Review your work with fresh eyes. Ask yourself:
+- every acceptance criterion is implemented;
+- no unrequested behavior, dependencies, public contracts, or files changed;
+- names and implementation follow existing project conventions;
+- tests cover behavior, errors, and relevant edges;
+- all validation actually run is reported truthfully.
 
-    **Completeness:**
-    - Did I fully implement everything in the spec?
-    - Did I miss any requirements?
-    - Are there edge cases I didn't handle?
+## Report Format
 
-    **Quality:**
-    - Is this my best work?
-    - Are names clear and accurate (match what things do, not how they work)?
-    - Is the code clean and maintainable?
-
-    **Discipline:**
-    - Did I avoid overbuilding (YAGNI)?
-    - Did I only build what was requested?
-    - Did I follow existing patterns in the codebase?
-
-    **Testing:**
-    - Did I write each test before its implementation?
-    - Did I watch each test fail before writing code?
-    - Do tests verify behavior (not just mock behavior)?
-    - Are tests comprehensive?
-
-    If you find issues during self-review, fix them now before reporting.
-
-    ## Report Format
-
-    When done, report:
-    - What you implemented
-    - What you tested and test results
-    - Files changed
-    - Self-review findings (if any)
-    - Any issues or concerns
+- implemented behavior;
+- tests and validation commands run, with results;
+- files changed;
+- self-review findings;
+- unresolved concerns or blockers.
 ```
 
-## Parallel Wave Variant
+## Parallel Variant
 
-When dispatching multiple implementers in the same wave, **add these sections** to each prompt:
+Add this section to every parallel implementer prompt:
 
-```
-    ## Parallel Execution Notice
+```markdown
+## Parallel Execution Notice
 
-    You are running in parallel with other implementer agents in this wave.
-    Other agents are working on: [list other task names in this wave]
-
-    **DO NOT** modify any files outside your task's file list.
-    Your files:
-    - [Create/Modify file list from plan]
-
-    If you discover you need to modify a file not in your list, STOP and report it
-    instead of making the change. The controller will coordinate the conflict.
+Other agents are working on: [task names].
+Do not create or modify files outside your allowed list. If additional files are necessary, stop and report the conflict to the controller.
 ```
 
-## Prior Wave Context (for Wave N > 0)
+## Prior-Wave Dependencies
 
-When dispatching implementers that depend on prior wave outputs, the Controller MUST read the actual generated source files and extract exact signatures. **Add this section** with real code:
+The controller must read actual completed artifacts and paste the relevant declarations—not a summary—into downstream prompts:
 
+```text
+## Prior-Wave Dependencies
+
+From Task X: `path/to/artifact`
+[exact relevant interface, schema, configuration, event, or exported declaration in the project’s syntax]
+
+Use these declarations exactly. If they conflict with the plan, stop and report the mismatch.
 ```
-    ## Prior Wave Dependencies
-
-    You depend on the following components created in previous waves.
-    Here are their **actual signatures** (read from generated source files):
-
-    ### From Task X ([task name]):
-    `[file path]`:
-    ```go
-    [paste actual exported interface/struct/function signatures from the file]
-    ```
-
-    ### From Task Y ([task name]):
-    `[file path]`:
-    ```go
-    [paste actual exported interface/struct/function signatures from the file]
-    ```
-
-    You MUST use these exact type names and method signatures.
-    If you find a mismatch between the plan and the actual generated code,
-    STOP and report it instead of guessing.
-```
-
-**Controller workflow for artifact passing:**
-1. After a wave completes, look at next wave's tasks and their "Blocked by" fields
-2. For each dependency, read the generated source files using the `read` tool
-3. Extract exported interfaces, structs, and function signatures
-4. Paste the actual code into the downstream implementer's prompt

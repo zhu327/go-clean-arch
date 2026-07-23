@@ -77,21 +77,11 @@ For finer-grained control, use individual skills:
 
 When multiple skills may apply, use them in this order:
 
-1. **Flow** (`brainstorming`) — Decide how to approach the task
+1. **Flow** (`go`, `brainstorming`) — Decide how to approach the task
 2. **Planning** (`writing-plans`) — Create the implementation plan
 3. **Execution** (`subagent-driven-development`, `test-driven-development`) — Execute the plan
 4. **Review** (`code-review-expert`) — Quality assurance
-5. **Review** (`code-review-expert`) — Quality assurance
-
-## Learned Patterns
-
-Experience patterns extracted from project practice, located in `.cursor/skills/learned/`:
-
-| Pattern | Description |
-|---------|-------------|
-| `gorm-preload-pattern` | GORM Preload to avoid N+1 queries |
-
-Use `/learn` to extract new experience patterns from the current session.
+5. **Simplification** (`code-simplifier`) — Reduce complexity
 
 ## Common Commands
 

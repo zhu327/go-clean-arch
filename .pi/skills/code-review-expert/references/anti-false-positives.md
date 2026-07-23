@@ -4,9 +4,9 @@ Cases that look like smells but are usually fine. Do not flag these by default.
 
 ## SOLID / DI
 
-- Composition roots (`main`, DI containers, Wire) wiring concrete deps — that is their job, not a DIP violation.
-- Thin adapters importing domain + infrastructure as explicit boundary glue.
-- Switch over external protocol, wire format, or closed enum — not automatically missing polymorphism.
+- Composition roots and dependency-injection configuration wiring concrete dependencies — that is their job, not a DIP violation.
+- Thin adapters importing domain and infrastructure as explicit boundary glue.
+- A switch over an external protocol, wire format, or closed enum is not automatically missing polymorphism.
 - High fan-out in an orchestration / use-case layer is not automatically dependency disorder.
 
 ## Coupling / change propagation
@@ -40,5 +40,5 @@ Cases that look like smells but are usually fine. Do not flag these by default.
 ## Concurrency
 
 - A `sync.Mutex` used briefly in a request-scoped struct is not automatically a bottleneck.
-- Goroutines that intentionally fire-and-forget with their own error logging are acceptable for non-critical side effects (metrics, audit logs).
+- Intentionally fire-and-forget background work with its own error logging can be acceptable for non-critical side effects (metrics, audit logs).
 - Sequential operations where each depends on the previous result are not "pointless serialization."

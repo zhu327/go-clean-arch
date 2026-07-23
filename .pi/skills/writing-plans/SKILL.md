@@ -1,270 +1,125 @@
 ---
 name: writing-plans
-description: Use after requirements or design are understood and before coding a multi-step change. Creates concrete implementation plans with vertical slices, dependency graphs, file lists, TDD steps, and validation commands.
+description: Use after requirements or design are understood and before coding a multi-step change. Creates concrete implementation plans with vertical slices, dependency graphs, file lists, test cases, and project-derived validation commands.
 ---
 
 # Writing Plans
 
-## Overview
+Write an executable implementation plan that tells an implementer what to change, how to verify it, and which work can proceed independently. Prefer small vertical slices, DRY, YAGNI, and test-first implementation.
 
-Write implementation plans that define the **skeleton** of the work: which files to touch for each task, the interface contracts to create, the test cases that must pass, and how to verify the result. Give the implementer the whole plan as bite-sized vertical-slice tasks. DRY. YAGNI. TDD.
+The plan defines contracts, files, acceptance criteria, and test scenarios. It does **not** include production method bodies or complete test code.
 
-The plan includes **skeleton code** — interface definitions, struct shapes, and function signatures — but NOT method bodies or test implementations. The implementer writes all bodies via TDD.
+**Announce at start:** “I'm using the writing-plans skill to create the implementation plan.”
 
-Assume the implementer is a skilled developer who knows almost nothing about our toolset or problem domain, and needs explicit contracts and test scenarios to work autonomously.
+**Save plans to:** the project’s existing planning location; use `docs/plans/YYYY-MM-DD-<feature-name>.md` only when no local convention exists.
 
-**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+## 1. Gather Context
 
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md` (use the `write` tool)
+Before planning:
 
-## Process
+- inspect the relevant implementation, tests, project instructions, architecture documents, ADRs, CI configuration, and existing commands;
+- identify the project’s terminology, module boundaries, naming conventions, test strategy, and validation commands;
+- record unknowns and resolve them before planning rather than inventing architecture or tooling.
 
-### 1. Gather Context
+Do not assume a language, framework, directory layout, dependency-injection mechanism, API style, test runner, or E2E harness.
 
-Before writing the plan, explore the relevant code directories and existing implementation patterns:
+## 2. Draft Vertical Slices
 
-- Identify the domain modules involved and read their current structure (use `read`, `bash` with `fd`/`rg`)
-- Note naming conventions, existing interfaces, and patterns in use
-- Check for ADRs or design docs that constrain the approach
-- Use the project's domain glossary vocabulary in task titles and descriptions
+A task is a narrow, complete, independently verifiable behavior—not a horizontal “implement all models” or “write all handlers” phase.
 
-### 2. Draft Vertical Slices
+For each proposed slice, provide:
 
-Break the plan into **vertical slices (tracer bullets)**. Each task is a thin but COMPLETE path through all integration layers end-to-end, NOT a horizontal slice of one layer.
+- **Title**
+- **Type:** AFK or HITL
+- **Blocked by:** explicit dependencies
+- **Areas touched:** use the project’s actual terminology
 
-<vertical-slice-rules>
-- Each slice delivers a narrow but COMPLETE path through every layer it touches (Domain → UseCase → Repository/Gateway → Handler → Route → Tests)
-- A completed slice is demoable or verifiable on its own
-- Prefer many thin slices over few thick ones
-- A slice like "implement all domain entities" is WRONG — instead "implement Create Certificate end-to-end" is correct
-</vertical-slice-rules>
+When this skill runs standalone, ask the user to approve the breakdown before writing the detailed plan. In an approved autonomous pipeline, continue unless an unresolved HITL decision remains.
 
-### 3. Quiz the User
+## 3. Write the Plan
 
-Present the proposed breakdown as a numbered list before writing the full plan. For each slice, show:
-
-- **Title**: short descriptive name
-- **Type**: HITL (needs human decision) / AFK (agent can execute autonomously)
-- **Blocked by**: which other slices (if any) must complete first
-- **Layers touched**: Domain / UseCase / Adapter / etc.
-
-Use the `question` tool to ask the user:
-
-- Does the granularity feel right? (too coarse / too fine)
-- Are the dependency relationships correct?
-- Should any slices be merged or split further?
-- Are the correct slices marked as HITL and AFK?
-
-**When running standalone** (not inside `/go`): STOP HERE. Do not write the full plan or proceed to Step 4 until the user explicitly approves the breakdown and answers the quiz.
-
-**When running inside `/go` pipeline**: Skip this quiz — proceed directly to Step 4 using the breakdown as-is. The user already approved the requirements in brainstorming; re-asking here breaks the autonomous chain. If unresolved HITL decisions exist, stop and report the blocker to the `go` coordinator instead of proceeding.
-
-### 4. Write the Full Plan
-
-Expand each approved slice into the full Task Structure (see below), add the Plan Coverage Checklist, and save the plan document using the `write` tool.
-
-### 5. Plan Coverage Check
-
-Before handing off to execution, explicitly verify the plan covers the approved requirements and has the guardrails needed for autonomous execution. If any checklist item fails, revise the plan before proceeding — do not hand off a known-incomplete plan.
-
-## Task & Step Granularity
-
-- **A Task** represents one Vertical Slice — a complete end-to-end feature path (typically 30-60 minutes).
-
-Because a Vertical Slice touches multiple layers, a single Task MUST list the interface contracts and test cases for each layer it touches (e.g., Repository, UseCase, Handler). The plan defines WHAT to build (skeleton code: interfaces, structs, signatures) and HOW it is verified (acceptance criteria + test cases); it does NOT include method bodies or test code. The implementer applies TDD per test case (red-green-refactor) — that discipline lives in the `implementer-prompt`, so do not repeat it as numbered steps in every task.
-
-## Plan Document Header
-
-**Every plan MUST start with this header:**
+Every plan begins with:
 
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For Pi:** Execute this plan using /skill:subagent-driven-development (current session with subagents).
+**Goal:** [One sentence]
 
-**Goal:** [One sentence describing what this builds]
+**Architecture:** [How this fits existing project architecture]
 
-**Architecture:** [2-3 sentences about approach]
-
-**Tech Stack:** [Key technologies/libraries]
+**Validation:** [Commands discovered from this project]
 
 ## Task Dependency Graph
 
-Tasks marked ✅ AFK can be executed by agents autonomously.
-Tasks marked 🙋 HITL require human decision before proceeding.
-
-\```
-Task 1 (AFK) ──┐
-                ├── Task 4 (AFK)
-Task 2 (AFK) ──┘
-Task 3 (HITL) ───── Task 5 (AFK)
-\```
-
 | Task | Type | Blocked by | Parallelizable with |
 |------|------|------------|---------------------|
-| 1    | AFK  | None       | 2, 3                |
-| 2    | AFK  | None       | 1, 3                |
-| ...  | ...  | ...        | ...                 |
-
----
+| 1 | AFK | None | 2 |
 ```
 
-## Task Structure
+For every task, use this structure:
 
 ```markdown
-### Task N: [Vertical Slice Name] (e.g., "Create Certificate End-to-End")
+### Task N: [Vertical Slice Name]
 
 **Type:** AFK / HITL
-**Blocked by:** Task X, Task Y / None - can start immediately
-**Layers touched:** Domain, UseCase, Repository, Handler
+**Blocked by:** Task X / None
+**Areas touched:** [project-specific areas]
 
-**Goal:** [One or two sentences: what this slice delivers end-to-end and why]
+**Goal:** [One or two sentences]
 
 **Acceptance Criteria:**
-- [ ] Criterion 1 (functional behavior from user perspective)
-- [ ] Criterion 2 (edge case or boundary condition)
-- [ ] Criterion 3 (non-functional requirement if any)
+- [ ] Observable behavior and outcome
+- [ ] Relevant error, boundary, or edge case
 
 **Files:**
-- Create: `internal/{domain}/domain/entity.go`
-- Create: `internal/{domain}/adapter/repository/repo.go`
-- Create: `internal/{domain}/adapter/repository/repo_test.go`
-- Create: `internal/{domain}/usecase/manager.go`
-- Create: `internal/{domain}/usecase/manager_test.go`
-- Create: `internal/{domain}/adapter/delivery/http/handler/handler.go`
-- Modify: `internal/{domain}/adapter/delivery/http/router/router.go`
-- Modify: `internal/di/wire.go`
-
----
+- Create: `actual/project/path`
+- Modify: `actual/project/path`
 
 #### Interface Contracts
 
-Define the skeleton the implementer must create — interfaces, struct shapes, and function signatures. List only what this task introduces or changes. If a contract already exists in another module, reference its file path instead of redefining it.
+Describe only new or changed public/internal contracts that downstream work needs:
 
-\```go
-// domain/entity.go
-type Entity struct {
-    ID   string
-    Name string
-    // ...fields with intent, not boilerplate
-}
-
-// usecase/interfaces.go
-type Repository interface {
-    Create(ctx context.Context, entity *domain.Entity) error
-}
-
-type Manager interface {
-    Create(ctx context.Context, entity *domain.Entity) error
-}
-
-// adapter/repository/repo.go
-func NewRepository(db *gorm.DB) *Repository
-
-// adapter/delivery/http/handler/handler.go
-func NewHandler(manager Manager) *Handler
-func (h *Handler) Create(c *gin.Context)
-\```
-
-> Signatures and type definitions only. No method bodies, no test code. These are what downstream tasks (and the spec reviewer) check against.
+```text
+[Use the project’s language and syntax. Include signatures, schemas, events, or configuration shape—not implementations.]
+```
 
 #### Test Cases to Cover
 
-Describe the scenarios the tests must verify — behavior and expected outcomes, not full test code. The implementer writes each test BEFORE its implementation (TDD). Organize by layer.
-
-**Repository layer:**
-- Create succeeds and persists the entity (verify via re-query or a test DB/container)
-- Create returns the DB error transparently on failure
-
-**UseCase layer:**
-- Create delegates to the Repository and returns its error
-- Create validates input (e.g., rejects empty Name) before calling the Repository
-
-**HTTP Handler layer:**
-- POST returns 200 with the created resource on valid input
-- POST returns 400 on missing/invalid required fields
-- Handler delegates to Manager and maps errors to the right response codes
-
-#### Layer Guidance
-
-Brief notes on each layer's responsibility in this slice, so the implementer understands intent without being handed the code:
-
-- **Domain:** define the `Entity` and any invariants
-- **Repository:** persist via GORM; follow existing repo patterns in this module
-- **UseCase:** orchestrate, validate input, own business rules; depend on the `Repository` interface (mocked in tests)
-- **Handler:** bind request, call Manager, format response; register the route in the router; wire into DI
-
----
+- Primary success behavior
+- Relevant validation, error, and boundary behavior
+- Integration/E2E behavior when the project has a suitable harness or requirements demand it
 
 #### Validation
 
-Run after the slice is implemented:
-
-\```bash
-go build ./...
-go test ./internal/{domain}/...
-go vet ./{domain}/...
-\```
-
-If this slice adds/modifies API endpoints, an E2E test task (see below) must also pass: `make e2e`.
+```text
+[Focused test command discovered from the project]
+[Relevant build, lint, typecheck, or integration command]
+```
 ```
 
-### E2E Test Tasks
+## 4. E2E Planning
 
-If the feature adds or modifies API endpoints, the plan MUST include one or more E2E test tasks (do NOT treat E2E as a separate gate that runs after the whole feature — it is a task in the plan, executed by the same subagent-driven-development flow). Each E2E task:
+If public behavior changes, determine from the repository whether E2E coverage exists or is required. If so, add a dependent E2E task that names:
 
-- Is typed AFK and blocked by the endpoint task(s) it covers
-- Lists the endpoints + scenarios to cover (use the `/skill:e2e-testing` for the methodology)
-- Has acceptance criteria like: `make e2e` passes (existing + new tests)
+- the public interfaces and scenarios to cover;
+- the existing harness, fixtures, and cleanup strategy;
+- the actual project command that must pass.
 
-## Plan Coverage Checklist
+Do not add an E2E task solely because a generic workflow says so when the project has no such harness and the requirements do not call for it.
 
-Every plan MUST include this checklist before the Execution Handoff. Fill it in based on the approved brainstorming requirements/design and the final task list:
+## 5. Plan Coverage Check
 
-```markdown
-## Plan Coverage Checklist
+Before handoff, confirm:
 
-- [ ] Every approved requirement maps to at least one task
-- [ ] Every task has clear acceptance criteria
-- [ ] Every task lists behavior-focused test cases
-- [ ] Every task lists exact Create/Modify file paths
-- [ ] New or modified API endpoints have E2E test task(s)
-- [ ] The dependency graph has no cycles
-- [ ] Parallelizable tasks do not modify the same files
-- [ ] No task is purely horizontal unless it is unavoidable infrastructure
-- [ ] Known assumptions or deviations from the approved design are documented
-```
+- [ ] Every approved requirement maps to a task.
+- [ ] Every task has observable acceptance criteria and behavior-focused tests.
+- [ ] Every task lists exact file paths after repository inspection.
+- [ ] Dependencies have no cycles.
+- [ ] Parallel tasks do not modify the same file.
+- [ ] Public-interface changes have appropriate integration/E2E coverage when applicable.
+- [ ] Validation commands come from this project.
+- [ ] Assumptions and deviations are explicit.
 
-If a checklist item does not apply, mark it `N/A` with a short reason instead of silently omitting it.
+## Handoff
 
-## Remember
-- Exact file paths always
-- Skeleton code (interfaces, structs, signatures) in the plan, NOT method bodies or test implementations — define the shape, the implementer writes the logic via TDD
-- Exact validation commands where relevant
-- Reference relevant skills with /skill: syntax
-- DRY, YAGNI, TDD (enforced by the implementer, not re-written as numbered steps per task)
-- If the plan adds/modifies API endpoints, identify the E2E requirement and include E2E authoring in the relevant task or as a separate vertical slice (use `/skill:e2e-testing`)
-- Vertical slices, not horizontal layers — each task must be independently verifiable
-- Declare dependencies explicitly — enable parallel execution where possible
-
-## Execution Handoff
-
-After saving the plan, hand off to `/skill:subagent-driven-development` for execution in the current session:
-
-- Fresh subagent per task, wave-parallel execution using the dependency graph
-- Spec-compliance review gate per task; global architecture/quality review at the end
-
-Within the `/go` pipeline this handoff is automatic (no confirmation). When running `writing-plans` standalone, confirm with the user before starting execution:
-
-```
-question({
-  questions: [{
-    id: "start_execution",
-    prompt: "Plan saved to docs/plans/<filename>.md. Start subagent-driven execution now?",
-    options: [
-      { label: "Yes - execute now with subagent-driven-development", value: "yes" },
-      { label: "Not yet - I'll review the plan first", value: "no" }
-    ]
-  }]
-})
-```
+Hand the saved plan to `subagent-driven-development`. In a standalone invocation, ask before execution; in an approved autonomous pipeline, continue automatically. Provide each implementer the full task text rather than asking it to rediscover the plan.
