@@ -34,6 +34,7 @@ func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	userHandler := handler.NewUserHandler(userManager)
 	userRegistrar := router.NewUserRegistrar(userHandler)
 	registrars := provideRegistrars(userRegistrar)
-	server := delivery.NewServer(cfg, registrars, tokenService)
+	databaseCleanup := provideDatabaseCleanup(gormDB)
+	server := delivery.NewServer(cfg, registrars, tokenService, databaseCleanup)
 	return server, nil
 }

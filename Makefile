@@ -1,4 +1,4 @@
-.PHONY: init dep doc godoc mock lint lint-dupl test bench build clean all serve cov di nilaway fmt docker-build get-ssh-key
+.PHONY: init dep doc godoc mock lint lint-dupl test bench build clean all serve cov di nilaway fmt docker-build get-ssh-key e2e
 
 init:
 	# pip install pre-commit
@@ -67,3 +67,6 @@ clean:
 
 docker-build:
 	docker build .
+
+e2e:
+	./scripts/e2e.sh

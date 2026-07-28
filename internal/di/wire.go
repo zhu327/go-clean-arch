@@ -31,6 +31,7 @@ func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 		userHandler.NewUserHandler,
 		userRouter.NewUserRegistrar,
 		provideRegistrars,
+		provideDatabaseCleanup,
 		delivery.NewServer,
 	)
 	return &delivery.Server{}, nil

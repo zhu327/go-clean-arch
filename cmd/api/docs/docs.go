@@ -30,7 +30,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.LoginBody"
+                            "$ref": "#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.LoginRequest"
                         }
                     }
                 ],
@@ -38,25 +38,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     }
                 }
@@ -77,33 +89,45 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.UserSignUp"
+                            "$ref": "#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.SignUpRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     }
                 }
@@ -116,7 +140,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "API for user to get their own profile",
+                "description": "API for authenticated user to get their own profile",
                 "tags": [
                     "User"
                 ],
@@ -126,25 +150,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_adapter_delivery_http_handler.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response"
+                            "$ref": "#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse"
                         }
                     }
                 }
@@ -152,7 +176,18 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "go-clean-arch_internal_adapter_delivery_http_dto.LoginBody": {
+        "go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "go-clean-arch_internal_user_adapter_delivery_http_dto.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -163,26 +198,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string",
-                    "maxLength": 25,
-                    "minLength": 5
-                }
-            }
-        },
-        "go-clean-arch_internal_adapter_delivery_http_dto.Response": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "error": {},
-                "message": {
                     "type": "string"
-                },
-                "status": {
-                    "type": "integer"
                 }
             }
         },
-        "go-clean-arch_internal_adapter_delivery_http_dto.UserSignUp": {
+        "go-clean-arch_internal_user_adapter_delivery_http_dto.SignUpRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -194,18 +214,25 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string",
-                    "maxLength": 25,
-                    "minLength": 5
+                    "type": "string"
                 },
                 "username": {
-                    "type": "string",
-                    "maxLength": 15,
-                    "minLength": 3
+                    "type": "string"
                 }
             }
         },
-        "internal_adapter_delivery_http_handler.Response": {
+        "go-clean-arch_internal_user_adapter_delivery_http_dto.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "go-clean-arch_internal_user_adapter_delivery_http_dto.UserResponse": {
             "type": "object",
             "properties": {
                 "email": {

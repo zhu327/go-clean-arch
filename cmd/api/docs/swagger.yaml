@@ -1,43 +1,42 @@
 definitions:
-  go-clean-arch_internal_adapter_delivery_http_dto.LoginBody:
+  go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  go-clean-arch_internal_user_adapter_delivery_http_dto.LoginRequest:
     properties:
       email:
         type: string
       password:
-        maxLength: 25
-        minLength: 5
         type: string
     required:
     - email
     - password
     type: object
-  go-clean-arch_internal_adapter_delivery_http_dto.Response:
-    properties:
-      data: {}
-      error: {}
-      message:
-        type: string
-      status:
-        type: integer
-    type: object
-  go-clean-arch_internal_adapter_delivery_http_dto.UserSignUp:
+  go-clean-arch_internal_user_adapter_delivery_http_dto.SignUpRequest:
     properties:
       email:
         type: string
       password:
-        maxLength: 25
-        minLength: 5
         type: string
       username:
-        maxLength: 15
-        minLength: 3
         type: string
     required:
     - email
     - password
     - username
     type: object
-  internal_adapter_delivery_http_handler.Response:
+  go-clean-arch_internal_user_adapter_delivery_http_dto.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  go-clean-arch_internal_user_adapter_delivery_http_dto.UserResponse:
     properties:
       email:
         type: string
@@ -59,24 +58,32 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.LoginBody'
+          $ref: '#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.LoginRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.TokenResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
       summary: Login (User)
       tags:
       - Auth
@@ -90,48 +97,56 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.UserSignUp'
+          $ref: '#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.SignUpRequest'
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
       summary: Signup (User)
       tags:
       - Auth
   /api/user/me:
     get:
-      description: API for user to get their own profile
+      description: API for authenticated user to get their own profile
       operationId: UserMe
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_adapter_delivery_http_handler.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_user_adapter_delivery_http_dto.UserResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/go-clean-arch_internal_adapter_delivery_http_dto.Response'
+            $ref: '#/definitions/go-clean-arch_internal_shared_adapter_delivery_http_middleware.ErrorResponse'
       security:
       - Bearer: []
       summary: Get User Profile

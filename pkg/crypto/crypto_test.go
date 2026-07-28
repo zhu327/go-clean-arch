@@ -30,4 +30,7 @@ func TestBcryptHasher_Verify(t *testing.T) {
 	if err := h.Verify("wrong", hash); err == nil {
 		t.Fatal("Verify wrong password expected error, got nil")
 	}
+	if err := h.Verify("secret", "not-a-bcrypt-hash"); err == nil {
+		t.Fatal("Verify malformed hash expected error, got nil")
+	}
 }

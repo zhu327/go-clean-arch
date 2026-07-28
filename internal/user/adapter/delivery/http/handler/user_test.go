@@ -11,6 +11,7 @@ import (
 
 	"go-clean-arch/internal/shared/adapter/delivery/http/middleware"
 	"go-clean-arch/internal/user/domain"
+	"go-clean-arch/internal/user/usecase"
 	"go-clean-arch/internal/user/usecase/dto"
 
 	"github.com/gin-gonic/gin"
@@ -53,10 +54,15 @@ func setupRouter(uc UserUseCase) *gin.Engine {
 	return r
 }
 
-func TestSignUp_ShortUsername_Returns400WithDomainError(t *testing.T) {
+func TestSignUp_ShortUsername_Returns400WithApplicationError(t *testing.T) {
 	uc := &spyUserUseCase{
 		signUpFn: func(ctx context.Context, params dto.SignUpParams) (*domain.User, error) {
-			return nil, domain.ErrUsernameTooShort
+			return nil, usecase.NewApplicationError(
+				usecase.ErrorCodeInvalidArgument,
+				usecase.StatusBadRequest,
+				domain.ErrUsernameTooShort.Error(),
+				domain.ErrUsernameTooShort,
+			)
 		},
 	}
 
@@ -84,10 +90,15 @@ func TestSignUp_ShortUsername_Returns400WithDomainError(t *testing.T) {
 	}
 }
 
-func TestSignUp_EmptyPassword_Returns400WithDomainError(t *testing.T) {
+func TestSignUp_EmptyPassword_Returns400WithApplicationError(t *testing.T) {
 	uc := &spyUserUseCase{
 		signUpFn: func(ctx context.Context, params dto.SignUpParams) (*domain.User, error) {
-			return nil, domain.ErrEmptyPassword
+			return nil, usecase.NewApplicationError(
+				usecase.ErrorCodeInvalidArgument,
+				usecase.StatusBadRequest,
+				domain.ErrEmptyPassword.Error(),
+				domain.ErrEmptyPassword,
+			)
 		},
 	}
 

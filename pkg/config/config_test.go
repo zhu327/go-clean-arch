@@ -1,54 +1,71 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
 )
 
-func TestConfig_DefaultTokenTTLs(t *testing.T) {
-	viper.Reset()
-	viper.SetDefault("ACCESS_TOKEN_TTL", "20m")
-	viper.SetDefault("REFRESH_TOKEN_TTL", "168h")
-
-	var cfg Config
-	err := viper.Unmarshal(&cfg, func(c *mapstructure.DecoderConfig) {
-		c.DecodeHook = mapstructure.StringToTimeDurationHookFunc()
-	})
-	if err != nil {
-		t.Fatalf("failed to unmarshal config: %v", err)
-	}
-
-	expectedAccess := 20 * time.Minute
-	expectedRefresh := 168 * time.Hour
-
-	if cfg.AccessTokenTTL != expectedAccess {
-		t.Errorf("expected AccessTokenTTL=%v, got %v", expectedAccess, cfg.AccessTokenTTL)
-	}
-	if cfg.RefreshTokenTTL != expectedRefresh {
-		t.Errorf("expected RefreshTokenTTL=%v, got %v", expectedRefresh, cfg.RefreshTokenTTL)
+func validValues() map[string]string {
+	return map[string]string{
+		"DB_HOST":           "db",
+		"DB_NAME":           "app",
+		"DB_USER":           "app",
+		"DB_PASSWORD":       "password",
+		"DB_PORT":           "5432",
+		"SECRET_KEY":        "12345678901234567890123456789012",
+		"PORT":              "8000",
+		"ACCESS_TOKEN_TTL":  "20m",
+		"REFRESH_TOKEN_TTL": "168h",
 	}
 }
 
-func TestConfig_ParsesTokenTTLs(t *testing.T) {
-	viper.Reset()
-	viper.Set("ACCESS_TOKEN_TTL", "20m")
-	viper.Set("REFRESH_TOKEN_TTL", "168h")
+func TestLoadConfigFromFile_EnvironmentOverridesDotEnv(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(path, []byte("DB_HOST=file-db\nDB_NAME=app\nDB_USER=app\nDB_PASSWORD=password\nDB_PORT=5432\nSECRET_KEY=12345678901234567890123456789012\nPORT=8000\nACCESS_TOKEN_TTL=20m\nREFRESH_TOKEN_TTL=168h\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
-	var cfg Config
-	err := viper.Unmarshal(&cfg, func(c *mapstructure.DecoderConfig) {
-		c.DecodeHook = mapstructure.StringToTimeDurationHookFunc()
+	cfg, err := loadConfig(path, func(key string) (string, bool) {
+		if key == "DB_HOST" {
+			return "environment-db", true
+		}
+		return "", false
 	})
 	if err != nil {
-		t.Fatalf("failed to unmarshal config: %v", err)
+		t.Fatalf("loadConfig returned error: %v", err)
 	}
+	if cfg.DBHost != "environment-db" {
+		t.Errorf("DBHost = %q, want environment-db", cfg.DBHost)
+	}
+}
 
-	if cfg.AccessTokenTTL != 20*time.Minute {
-		t.Errorf("expected AccessTokenTTL=20m, got %v", cfg.AccessTokenTTL)
+func TestLoadConfigFromFile_RejectsInvalidConfiguration(t *testing.T) {
+	for name, change := range map[string]func(map[string]string){
+		"missing database host":               func(v map[string]string) { v["DB_HOST"] = "" },
+		"database port out of range":          func(v map[string]string) { v["DB_PORT"] = "65536" },
+		"weak secret":                         func(v map[string]string) { v["SECRET_KEY"] = "too-short" },
+		"server port out of range":            func(v map[string]string) { v["PORT"] = "0" },
+		"non-positive access TTL":             func(v map[string]string) { v["ACCESS_TOKEN_TTL"] = "0s" },
+		"refresh TTL shorter than access TTL": func(v map[string]string) { v["REFRESH_TOKEN_TTL"] = "10m" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			values := validValues()
+			change(values)
+			if _, err := configFromValues(values); err == nil {
+				t.Fatal("configFromValues succeeded, want validation error")
+			}
+		})
 	}
-	if cfg.RefreshTokenTTL != 168*time.Hour {
-		t.Errorf("expected RefreshTokenTTL=168h, got %v", cfg.RefreshTokenTTL)
+}
+
+func TestConfigFromValues_ParsesValidConfiguration(t *testing.T) {
+	cfg, err := configFromValues(validValues())
+	if err != nil {
+		t.Fatalf("configFromValues returned error: %v", err)
+	}
+	if cfg.AccessTokenTTL != 20*time.Minute || cfg.RefreshTokenTTL != 168*time.Hour {
+		t.Errorf("unexpected TTLs: access=%v refresh=%v", cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 	}
 }

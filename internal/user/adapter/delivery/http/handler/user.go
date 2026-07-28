@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"go-clean-arch/internal/shared/adapter/delivery/http/middleware"
@@ -30,13 +31,15 @@ func NewUserHandler(userUseCase UserUseCase) *UserHandler {
 //	@Param			input	body		dto.SignUpRequest	true	"Input Fields"
 //	@Router			/api/auth/signup [post]
 //	@Success		201		{object}	dto.UserResponse
-//	@Failure		400		{object}	utils.AppError
-//	@Failure		409		{object}	utils.AppError
-//	@Failure		500		{object}	utils.AppError
+//	@Failure		400		{object}	middleware.ErrorResponse
+//	@Failure		409		{object}	middleware.ErrorResponse
+//	@Failure		413		{object}	middleware.ErrorResponse
+//	@Failure		429		{object}	middleware.ErrorResponse
+//	@Failure		500		{object}	middleware.ErrorResponse
 func (h *UserHandler) SignUp(c *gin.Context) {
 	var req dto.SignUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(utils.BadRequestError(err.Error()))
+		_ = c.Error(requestBodyError(err))
 		return
 	}
 
@@ -66,12 +69,15 @@ func (h *UserHandler) SignUp(c *gin.Context) {
 //	@Param			input	body		dto.LoginRequest	true	"Input Fields"
 //	@Router			/api/auth/login [post]
 //	@Success		200		{object}	dto.TokenResponse
-//	@Failure		401		{object}	utils.AppError
-//	@Failure		500		{object}	utils.AppError
+//	@Failure		400		{object}	middleware.ErrorResponse
+//	@Failure		401		{object}	middleware.ErrorResponse
+//	@Failure		413		{object}	middleware.ErrorResponse
+//	@Failure		429		{object}	middleware.ErrorResponse
+//	@Failure		500		{object}	middleware.ErrorResponse
 func (h *UserHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(utils.BadRequestError(err.Error()))
+		_ = c.Error(requestBodyError(err))
 		return
 	}
 
@@ -90,6 +96,14 @@ func (h *UserHandler) Login(c *gin.Context) {
 	})
 }
 
+func requestBodyError(err error) error {
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		return utils.NewAppError(http.StatusRequestEntityTooLarge, "request body too large")
+	}
+	return utils.BadRequestError(err.Error())
+}
+
 // Me godoc
 //
 //	@Summary		Get User Profile
@@ -99,8 +113,9 @@ func (h *UserHandler) Login(c *gin.Context) {
 //	@Security		Bearer
 //	@Router			/api/user/me [get]
 //	@Success		200		{object}	dto.UserResponse
-//	@Failure		401		{object}	utils.AppError
-//	@Failure		404		{object}	utils.AppError
+//	@Failure		401		{object}	middleware.ErrorResponse
+//	@Failure		404		{object}	middleware.ErrorResponse
+//	@Failure		500		{object}	middleware.ErrorResponse
 func (h *UserHandler) Me(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
