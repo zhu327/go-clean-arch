@@ -8,16 +8,18 @@ import (
 
 	"go-clean-arch/internal/user/domain"
 	"go-clean-arch/internal/user/usecase/dto"
-	"go-clean-arch/pkg/auth"
-	"go-clean-arch/pkg/utils"
 )
 
 type stubUserRepo struct {
+	createFn      func(ctx context.Context, user domain.User) (domain.User, error)
 	findByEmailFn func(ctx context.Context, email string) (domain.User, error)
 	findByIDFn    func(ctx context.Context, id uint) (domain.User, error)
 }
 
 func (s *stubUserRepo) Create(ctx context.Context, user domain.User) (domain.User, error) {
+	if s.createFn != nil {
+		return s.createFn(ctx, user)
+	}
 	return user, nil
 }
 
@@ -35,23 +37,23 @@ func (s *stubUserRepo) FindByEmail(ctx context.Context, email string) (domain.Us
 	return domain.User{}, domain.ErrUserNotFound
 }
 
-type stubTokenService struct {
-	generateTokenFn func(req auth.GenerateTokenRequest) (auth.GenerateTokenResponse, error)
-	validateTokenFn func(tokenString string) (*auth.TokenClaims, error)
+type stubTokenIssuer struct {
+	issueAccessTokenFn  func(userID uint, expireAt time.Time) (string, error)
+	issueRefreshTokenFn func(userID uint, expireAt time.Time) (string, error)
 }
 
-func (s *stubTokenService) GenerateToken(req auth.GenerateTokenRequest) (auth.GenerateTokenResponse, error) {
-	if s.generateTokenFn != nil {
-		return s.generateTokenFn(req)
+func (s *stubTokenIssuer) IssueAccessToken(userID uint, expireAt time.Time) (string, error) {
+	if s.issueAccessTokenFn != nil {
+		return s.issueAccessTokenFn(userID, expireAt)
 	}
-	return auth.GenerateTokenResponse{TokenString: "token", TokenID: "id"}, nil
+	return "access", nil
 }
 
-func (s *stubTokenService) ValidateToken(tokenString string) (*auth.TokenClaims, error) {
-	if s.validateTokenFn != nil {
-		return s.validateTokenFn(tokenString)
+func (s *stubTokenIssuer) IssueRefreshToken(userID uint, expireAt time.Time) (string, error) {
+	if s.issueRefreshTokenFn != nil {
+		return s.issueRefreshTokenFn(userID, expireAt)
 	}
-	return &auth.TokenClaims{}, nil
+	return "refresh", nil
 }
 
 type stubPasswordHasher struct {
@@ -73,7 +75,7 @@ func (s *stubPasswordHasher) Verify(password, hash string) error {
 	return nil
 }
 
-func newUserManager(repo UserRepository, ts auth.TokenService, hasher PasswordHasher) *UserManager {
+func newUserManager(repo UserRepository, ts TokenIssuer, hasher PasswordHasher) *UserManager {
 	return NewUserManager(repo, ts, hasher, TokenTTLs{
 		Access:  20 * time.Minute,
 		Refresh: 7 * 24 * time.Hour,
@@ -91,7 +93,7 @@ func TestUserManager_SignUpUsesPasswordHasher(t *testing.T) {
 
 	repo := &stubUserRepo{}
 
-	m := newUserManager(repo, &stubTokenService{}, hasher)
+	m := newUserManager(repo, &stubTokenIssuer{}, hasher)
 
 	user, err := m.SignUp(context.Background(), dto.SignUpParams{
 		Username: "testuser",
@@ -116,7 +118,7 @@ func TestUserManager_SignUpReturnsDomainErrorWhenUserExists(t *testing.T) {
 		},
 	}
 
-	m := newUserManager(repo, &stubTokenService{}, &stubPasswordHasher{})
+	m := newUserManager(repo, &stubTokenIssuer{}, &stubPasswordHasher{})
 
 	_, err := m.SignUp(context.Background(), dto.SignUpParams{
 		Username: "testuser",
@@ -129,15 +131,52 @@ func TestUserManager_SignUpReturnsDomainErrorWhenUserExists(t *testing.T) {
 	if !errors.Is(err, domain.ErrUserAlreadyExists) {
 		t.Errorf("expected domain.ErrUserAlreadyExists, got %v", err)
 	}
-	var appErr *utils.AppError
-	if errors.As(err, &appErr) {
-		t.Error("error should not be an AppError, should be a plain domain sentinel")
+	var appErr *ApplicationError
+	if !errors.As(err, &appErr) {
+		t.Fatal("expected an ApplicationError")
+	}
+	if appErr.Code != ErrorCodeUserAlreadyExists || appErr.HTTPStatus != StatusConflict {
+		t.Errorf("unexpected application error: %+v", appErr)
+	}
+}
+
+func TestUserManager_SignUpReturnsRepositoryConflictWhenInsertRaces(t *testing.T) {
+	repositoryConflict := NewApplicationError(
+		ErrorCodeEmailAlreadyExists,
+		StatusConflict,
+		"email already exists",
+		errors.New("unique violation"),
+	)
+	repo := &stubUserRepo{
+		createFn: func(context.Context, domain.User) (domain.User, error) {
+			return domain.User{}, repositoryConflict
+		},
+	}
+
+	_, err := newUserManager(
+		repo,
+		&stubTokenIssuer{},
+		&stubPasswordHasher{},
+	).SignUp(context.Background(), dto.SignUpParams{
+		Username: "testuser",
+		Email:    "test@test.com",
+		Password: "password",
+	})
+	if err == nil {
+		t.Fatal("expected insert conflict")
+	}
+	var appErr *ApplicationError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("error = %T, want ApplicationError", err)
+	}
+	if appErr.Code != ErrorCodeEmailAlreadyExists || appErr.HTTPStatus != StatusConflict {
+		t.Fatalf("application error = %+v", appErr)
 	}
 }
 
 func TestUserManager_SignUpReturnsDomainValidationErrorForShortUsername(t *testing.T) {
 	repo := &stubUserRepo{}
-	m := newUserManager(repo, &stubTokenService{}, &stubPasswordHasher{})
+	m := newUserManager(repo, &stubTokenIssuer{}, &stubPasswordHasher{})
 
 	_, err := m.SignUp(context.Background(), dto.SignUpParams{
 		Username: "ab",
@@ -150,9 +189,12 @@ func TestUserManager_SignUpReturnsDomainValidationErrorForShortUsername(t *testi
 	if !errors.Is(err, domain.ErrUsernameTooShort) {
 		t.Errorf("expected domain.ErrUsernameTooShort, got %v", err)
 	}
-	var appErr *utils.AppError
-	if errors.As(err, &appErr) {
-		t.Error("error should not be an AppError")
+	var appErr *ApplicationError
+	if !errors.As(err, &appErr) {
+		t.Fatal("expected an ApplicationError")
+	}
+	if appErr.Code != ErrorCodeInvalidArgument || appErr.HTTPStatus != StatusBadRequest {
+		t.Errorf("unexpected application error: %+v", appErr)
 	}
 }
 
@@ -163,7 +205,7 @@ func TestUserManager_LoginReturnsErrInvalidCredentialsForMissingUser(t *testing.
 		},
 	}
 
-	m := newUserManager(repo, &stubTokenService{}, &stubPasswordHasher{})
+	m := newUserManager(repo, &stubTokenIssuer{}, &stubPasswordHasher{})
 
 	_, err := m.Login(context.Background(), dto.LoginParams{
 		Email:    "missing@test.com",
@@ -175,9 +217,12 @@ func TestUserManager_LoginReturnsErrInvalidCredentialsForMissingUser(t *testing.
 	if !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("expected ErrInvalidCredentials, got %v", err)
 	}
-	var appErr *utils.AppError
-	if errors.As(err, &appErr) {
-		t.Error("error should not be an AppError")
+	var appErr *ApplicationError
+	if !errors.As(err, &appErr) {
+		t.Fatal("expected an ApplicationError")
+	}
+	if appErr.Code != ErrorCodeInvalidCredentials || appErr.HTTPStatus != StatusUnauthorized {
+		t.Errorf("unexpected application error: %+v", appErr)
 	}
 }
 
@@ -188,7 +233,7 @@ func TestUserManager_FindByIDReturnsDomainErrUserNotFound(t *testing.T) {
 		},
 	}
 
-	m := newUserManager(repo, &stubTokenService{}, &stubPasswordHasher{})
+	m := newUserManager(repo, &stubTokenIssuer{}, &stubPasswordHasher{})
 
 	_, err := m.FindByID(context.Background(), 999)
 	if err == nil {
@@ -197,9 +242,12 @@ func TestUserManager_FindByIDReturnsDomainErrUserNotFound(t *testing.T) {
 	if !errors.Is(err, domain.ErrUserNotFound) {
 		t.Errorf("expected domain.ErrUserNotFound, got %v", err)
 	}
-	var appErr *utils.AppError
-	if errors.As(err, &appErr) {
-		t.Error("error should not be an AppError")
+	var appErr *ApplicationError
+	if !errors.As(err, &appErr) {
+		t.Fatal("expected an ApplicationError")
+	}
+	if appErr.Code != ErrorCodeUserNotFound || appErr.HTTPStatus != StatusNotFound {
+		t.Errorf("unexpected application error: %+v", appErr)
 	}
 }
 
@@ -221,7 +269,7 @@ func TestUserManager_LoginUsesPasswordHasher(t *testing.T) {
 		},
 	}
 
-	m := newUserManager(repo, &stubTokenService{}, hasher)
+	m := newUserManager(repo, &stubTokenIssuer{}, hasher)
 
 	_, err := m.Login(context.Background(), dto.LoginParams{Email: "test@test.com", Password: "correct"})
 	if err != nil {
@@ -229,6 +277,34 @@ func TestUserManager_LoginUsesPasswordHasher(t *testing.T) {
 	}
 	if !verified {
 		t.Fatal("expected passwordHasher.Verify to be called")
+	}
+}
+
+func TestUserManager_LoginIssuesExplicitAccessAndRefreshTokens(t *testing.T) {
+	var accessUserID, refreshUserID uint
+	issuer := &stubTokenIssuer{
+		issueAccessTokenFn: func(userID uint, _ time.Time) (string, error) {
+			accessUserID = userID
+			return "access-token", nil
+		},
+		issueRefreshTokenFn: func(userID uint, _ time.Time) (string, error) {
+			refreshUserID = userID
+			return "refresh-token", nil
+		},
+	}
+	repo := &stubUserRepo{findByEmailFn: func(context.Context, string) (domain.User, error) {
+		return domain.User{ID: 42, Password: "hashed"}, nil
+	}}
+
+	tokens, err := newUserManager(repo, issuer, &stubPasswordHasher{}).Login(context.Background(), dto.LoginParams{})
+	if err != nil {
+		t.Fatalf("Login returned error: %v", err)
+	}
+	if tokens.AccessToken != "access-token" || tokens.RefreshToken != "refresh-token" {
+		t.Errorf("unexpected tokens: %+v", tokens)
+	}
+	if accessUserID != 42 || refreshUserID != 42 {
+		t.Errorf("issuer received user IDs access=%d refresh=%d, want 42", accessUserID, refreshUserID)
 	}
 }
 
@@ -245,7 +321,7 @@ func TestUserManager_LoginRejectsWrongPassword(t *testing.T) {
 		},
 	}
 
-	m := newUserManager(repo, &stubTokenService{}, hasher)
+	m := newUserManager(repo, &stubTokenIssuer{}, hasher)
 
 	_, err := m.Login(context.Background(), dto.LoginParams{Email: "test@test.com", Password: "wrong"})
 	if err == nil {

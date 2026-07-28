@@ -1,310 +1,73 @@
 # Go Clean Architecture Template
 
-This repository provides a template for building Go applications following **DDD (Domain-Driven Design) + Clean Architecture** principles. Each bounded context is organized as a self-contained domain module, promoting modularity, testability, and maintainability.
+A Go template organized as domain modules with DDD and Clean Architecture boundaries. The current example exposes user registration, login, and authenticated profile endpoints.
 
-## Features
+## Configuration and startup
 
-- **DDD + Clean Architecture**: Domain-first organization with clear layer boundaries.
-- **Domain Module Pattern**: Each bounded context has its own `domain/`, `usecase/`, and `adapter/` layers.
-- **Dependency Injection**: Compile-time DI using Google Wire with grouped `wire.NewSet` bindings.
-- **Unified Error Handling**: `AppError` pattern with ErrorHandler middleware.
-- **Structured Logging**: `pkg/log` for JSON-formatted structured logging.
-- **Configuration Management**: Environment-based configuration using Viper.
-- **Docker Support**: Includes `Dockerfile` and `docker-compose.yaml` for easy setup and deployment.
+Configuration is loaded from `.env` when present, then process environment variables take precedence. Copy the sample for local development:
 
-## Architecture Design
-
-This project adopts a **domain-first** layout where dependency direction flows **only inward**:
-
-```
-External World (HTTP, DB, External APIs)
- ↓
-Adapter Layer (Delivery, Repository, Gateway)
- ↓
-UseCase Layer (Business logic orchestration, interface definitions)
- ↓
-Domain Layer (Core entities, business rules)
+```sh
+cp .env.sample .env
+# Generate a distinct production secret; do not commit it.
+python3 -c 'import secrets; print(secrets.token_urlsafe(48))'
 ```
 
-### Architectural Diagram
+`SECRET_KEY` is required and must be at least 32 bytes. Set it through the deployment environment or secret manager; `.env.sample` deliberately contains only a non-secret placeholder. Database values (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`) are also required. `PORT` defaults to `8000`; access and refresh TTLs default to `20m` and `168h`.
 
-```mermaid
-graph TD
-    subgraph "External World"
-        Client[Client / Web UI]
-        DB[(Database)]
-    end
+Migrations run automatically during application startup. An existing legacy `users` table is accepted as the version-1 baseline only when its required unique email and username constraints are present; otherwise startup fails rather than guessing at schema safety.
 
-    subgraph "Shared Infrastructure"
-        Server["Server<br/>(Gin Engine)"]
-        Router["Central Router"]
-        MW["Middleware<br/>(ErrorHandler, Recovery)"]
-    end
+The liveness endpoint is `GET /healthz` and returns `200` once the HTTP service is available.
 
-    subgraph "User Domain Module"
-        subgraph "Adapter Layer"
-            UserHTTP["HTTP Handler"]
-            UserRouter["Domain Router"]
-            UserRepo["Repository<br/>(GORM)"]
-        end
+## Run with Docker Compose
 
-        subgraph "UseCase Layer"
-            UserManager["UserManager"]
-            UserInterfaces["interfaces.go<br/>(Ports)"]
-            UserDTO["UseCase DTOs"]
-        end
+Compose requires a real secret in the caller environment; it does not load a secret from the image:
 
-        subgraph "Domain Layer"
-            UserEntity["User Entity"]
-            UserRules["Business Rules<br/>& Validation"]
-        end
-    end
-
-    Client --> Server
-    Server --> MW --> Router
-    Router --> UserRouter --> UserHTTP
-    UserHTTP --> UserManager
-    UserManager --> UserInterfaces
-    UserRepo -.->|implements| UserInterfaces
-    UserManager --> UserEntity
-    UserManager --> UserRules
-    UserManager -.-> UserDTO
-    UserRepo --> DB
-
-    classDef domainStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef usecaseStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef adapterStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef sharedStyle fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    classDef externalStyle fill:#fce4ec,stroke:#b71c1c,stroke-width:2px
-
-    class UserEntity,UserRules domainStyle
-    class UserManager,UserInterfaces,UserDTO usecaseStyle
-    class UserHTTP,UserRouter,UserRepo adapterStyle
-    class Server,Router,MW sharedStyle
-    class Client,DB externalStyle
+```sh
+export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+docker compose up --build
 ```
 
-### Layer Descriptions
+The API is published on `http://localhost:8000` by default. `PORT` controls the port inside the container and `HOST_PORT` controls the published local port; for example, `PORT=8080 HOST_PORT=18080 docker compose up --build` publishes `localhost:18080` to the API listening on `8080`. Compose uses PostgreSQL 16 and persists its data in the `postgres-data` volume.
 
-- **Domain Layer**: Core business entities and rules. No dependencies on any other layer.
-- **UseCase Layer**: Orchestrates business workflows. Defines port interfaces (`interfaces.go`) that adapters implement.
-- **Adapter Layer**: Bridges to the outside world (HTTP handlers, database repositories, external API gateways).
-- **Shared Infrastructure**: HTTP server assembly, central router registration, cross-cutting middleware.
+## API behavior
 
-### Key Principles
+- `POST /api/auth/signup` creates an account.
+- `POST /api/auth/login` returns an access token and a refresh token.
+- `GET /api/user/me` requires `Authorization: Bearer <access token>`; refresh tokens are intentionally rejected with `401`.
+- Public errors use `{ "code": "...", "message": "..." }`. Generated Swagger documents are in `cmd/api/docs/`.
+- Authentication endpoints enforce request-body limits and an in-memory, per-IP rate limit. This limiter is single-process only; use shared edge/distributed controls when running multiple instances.
 
-1. **Dependency Direction**: All dependencies point inward. Inner layers never depend on outer layers.
-2. **Domain Module Isolation**: Each bounded context (e.g., User) is self-contained with its own layers.
-3. **Interface Segregation**: Ports are defined by the consumer (UseCase) and implemented by the provider (Adapter).
-4. **Unified Error Handling**: Use `AppError` + `ErrorHandler` middleware instead of ad-hoc error responses.
+The HTTP server has bounded read/write timeouts and handles `SIGINT`/`SIGTERM` with graceful shutdown before closing the database connection.
 
-## Project Structure
+## Development
 
-```
-├── cmd/
-│   └── api/
-│       └── main.go                              # Entry point
-├── internal/
-│   ├── user/                                    # User domain module
-│   │   ├── domain/                              # Domain entities & business rules
-│   │   │   └── user.go
-│   │   ├── usecase/                             # Business logic orchestration
-│   │   │   ├── interfaces.go                    # Ports (Repository/Gateway interfaces)
-│   │   │   ├── user.go                          # UserManager implementation
-│   │   │   ├── dto/                             # UseCase-level DTOs
-│   │   │   │   └── user.go
-│   │   │   └── mock/                            # Generated mocks
-│   │   │       └── interfaces.go
-│   │   └── adapter/                             # Infrastructure implementations
-│   │       ├── delivery/
-│   │       │   └── http/
-│   │       │       ├── handler/                 # HTTP handlers
-│   │       │       │   └── user.go
-│   │       │       ├── router/                  # Domain route registration
-│   │       │       │   └── user.go
-│   │       │       └── dto/                     # HTTP request/response DTOs
-│   │       │           └── user.go
-│   │       └── repository/                      # Database implementation
-│   │           ├── user.go
-│   │           └── user_model.go
-│   ├── shared/                                  # Shared infrastructure
-│   │   └── adapter/
-│   │       └── delivery/
-│   │           ├── server.go                    # HTTP server assembly
-│   │           └── http/
-│   │               ├── router/
-│   │               │   └── router.go            # Central route registration
-│   │               └── middleware/
-│   │                   └── error_handler.go     # Unified error handling
-│   └── di/                                      # Dependency injection (Wire)
-│       ├── wire.go
-│       └── wire_gen.go
-└── pkg/                                         # Shared libraries
-    ├── auth/                                    # JWT token service
-    ├── config/                                  # Configuration loading
-    ├── crypto/                                  # Password hashing
-    ├── db/                                      # Database connection
-    ├── log/                                     # Structured logging
-    └── utils/                                   # AppError and utilities
+Prerequisites: the Go version declared in `go.mod`, Docker Compose, Make, and the tools installed by `make init`.
+
+```sh
+make doc       # regenerate Swagger artifacts
+make test      # test with coverage
+make build     # build bin/go-clean-arch
+make lint      # run golangci-lint
+make e2e       # Compose black-box signup/login/access/refresh smoke test
 ```
 
-## Adding a New Domain Module
+`make e2e` creates a temporary strong `SECRET_KEY`, checks the resolved Compose `HOST_PORT` → `PORT` mapping, starts reusable Compose services with `docker compose up --build`, waits for `/healthz`, validates signup, login, access-token authorization and refresh-token rejection, then removes its Compose resources. Set `PORT` and/or `HOST_PORT` to validate a non-default mapping.
 
-To add a new domain module (e.g., `article`):
+## Extending the application
 
-1. **Create the domain entity**: `internal/article/domain/article.go`
-2. **Define use case ports**: `internal/article/usecase/interfaces.go`
-3. **Implement the manager**: `internal/article/usecase/article.go`
-4. **Create use case DTOs**: `internal/article/usecase/dto/article.go`
-5. **Implement the repository**: `internal/article/adapter/repository/article.go`
-6. **Create HTTP handler**: `internal/article/adapter/delivery/http/handler/article.go`
-7. **Register routes**: `internal/article/adapter/delivery/http/router/article.go`
-8. **Register in central router**: Add `RegisterArticleRoutes` call to `internal/shared/adapter/delivery/http/router/router.go`
-9. **Wire DI**: Add providers to `internal/di/wire.go` sets and regenerate with `make di`
+New HTTP modules implement the shared `RouteRegistrar` contract and are supplied through DI. Add the registrar to the DI provider set and regenerate Wire (`make di`); do not hand-edit central route registration as an extension mechanism. Keep domain, use case, and adapter dependencies pointing inward.
 
-## AI-Assisted Development (Cursor)
+## Project layout
 
-This project is deeply integrated with Cursor AI workflows. Skills, Subagents, and Rules enable fully automated development from requirements to production-ready code.
-
-### `/go` — End-to-End Development (Recommended)
-
-Type `/go` followed by a requirement description in Cursor, and AI will complete the full development lifecycle automatically:
-
+```text
+internal/{domain}/domain/   # entities and business rules
+internal/{domain}/usecase/  # application workflows and ports
+internal/{domain}/adapter/  # HTTP, persistence, and infrastructure adapters
+internal/shared/            # shared server, routing, and middleware
+internal/di/                # Wire composition root
+pkg/                         # configuration, auth, database, logging, utilities
 ```
-/go Add an Article domain module with CRUD operations and pagination
-```
-
-The 5 automated stages:
-
-```
-┌────────────────┐    ┌────────────────┐    ┌────────────────────────┐    ┌────────────────┐    ┌────────────────┐
-│ 1. Require-    │───▶│ 2. Planning    │───▶│ 3. Wave Execution      │───▶│ 4. Code        │───▶│ 5. Code        │
-│    ments       │    │                │    │                        │    │    Review      │    │ Simplifi-      │
-│ brainstorming  │    │ writing-plans  │    │ subagent-driven-       │    │ code-reviewer  │    │ code-simplifier│
-│ ⬆ Only human   │    │   Automatic    │    │ development            │    │   Automatic    │    │   Automatic    │
-│  interaction   │    │                │    │   Automatic            │    │                │    │                │
-└────────────────┘    └────────────────┘    └────────────────────────┘    └────────────────┘    └────────────────┘
-```
-
-- **Only step 1** requires human confirmation; steps 2-5 run fully automatically
-- Planning includes a **Plan Coverage Checklist** before execution
-- Execution uses **dependency-aware waves**; independent tasks run in parallel, blocked tasks run sequentially
-- Each task passes a **spec-compliance review** gate, and each wave ends with validation (`go build`, `go test`, `go vet`)
-- Final review focuses on **global architecture and code quality**; issues found during review are auto-fixed and re-verified
-- E2E tests for new API endpoints are planned as tasks in Step 2 and executed in Step 3
-
-### Skills
-
-Skills are reusable AI workflow instructions located in `.cursor/skills/`:
-
-| Category | Skill | Purpose | Trigger |
-|----------|-------|---------|---------|
-| **Flow** | `go` | End-to-end automated development (recommended) | `/go` + description |
-| **Flow** | `brainstorming` | Requirements exploration, outputs design spec | Auto-triggered before feature creation |
-| **Planning** | `writing-plans` | Write implementation plans with dependency graphs and test scenarios | Multi-step tasks with specs |
-| **Execution** | `subagent-driven-development` | Dependency-aware wave execution with per-task spec review | Current session plan execution |
-| **Execution** | `test-driven-development` | TDD-driven development | New features, bug fixes |
-| **Review** | `code-review-expert` | SOLID / security / architecture review | Review git changes |
-
-### Subagents
-
-Subagents are specialized agents automatically dispatched during the `/go` pipeline:
-
-| Agent | Purpose | When Dispatched |
-|-------|---------|-----------------|
-| `code-reviewer` | Review code changes, detect SOLID violations and security risks | `/go` step 4 (automatic) |
-| `code-simplifier` | Simplify code, reduce complexity while preserving behavior | `/go` step 5 (automatic) |
-
-### Rules
-
-Rules provide persistent project-level coding standards for AI, located in `.cursor/rules/`:
-
-| Rule | Scope | Description |
-|------|-------|-------------|
-| `00-project-overview` | Global | Project architecture, tech stack, directory structure |
-| `01-code-style` | Global | Naming, error handling, logging, Context passing |
-| `02-best-practices` | `**/*.go` | Security, performance, config management, dev workflow |
-| `10-domain-layer` | `**/domain/*.go` | Domain entity definitions, status types |
-| `11-usecase-layer` | `**/usecase/**/*.go` | UseCase Manager, interfaces, DTO conventions |
-| `12-handler-layer` | `**/delivery/http/**/*.go` | HTTP Handler flow, error delegation |
-| `13-repository-layer` | `**/repository/*.go` | GORM models, data operations, model mapping |
-| `14-gateway-layer` | `**/gateway/**/*.go` | External service gateway conventions |
-| `15-task-layer` | `**/delivery/task/*.go` | Background task conventions |
-| `20-wire-di` | `**/di/*.go` | Wire dependency injection organization |
-| `30-testing` | `**/*_test.go` | TDD workflow, table-driven tests, mocking |
-| `40-api-swagger` | handler files | Swagger annotation conventions |
-| `session-continuation` | Global | Session continuation with next-step suggestions |
-
-### Step-by-Step Usage
-
-If you prefer not to use `/go`, you can trigger individual skills:
-
-```
-# Explore requirements first
-/brainstorming I want to add a tag management module
-
-# After design is confirmed, generate implementation plan
-/writing-plans Create an implementation plan based on the confirmed design
-
-# Execute the plan (wave-parallel subagent-driven development)
-/subagent-driven-development Execute docs/plans/2026-04-07-tag-module.md
-
-# Review after completion
-/code-review-expert Review the current git changes
-```
-
-## Getting Started
-
-### Prerequisites
-
-- [Go](https://golang.org/dl/) (version specified in `go.mod`)
-- [Docker & Docker Compose](https://docs.docker.com/engine/install/)
-- [Make](https://www.gnu.org/software/make/)
-
-### Installation
-
-1. **Clone the repository:**
-    ```sh
-    git clone https://github.com/your-username/go-clean-arch.git
-    cd go-clean-arch
-    ```
-
-2. **Set up environment variables:**
-    ```sh
-    cp .env.sample .env
-    ```
-
-3. **Install development tools and dependencies:**
-    ```sh
-    make init
-    make dep
-    ```
-
-## Development Workflow
-
-| Command | Description |
-|---------|-------------|
-| `make build` | Build the application |
-| `make serve` | Build and start the server |
-| `make di` | Generate Wire dependency injection code |
-| `make doc` | Generate Swagger API documentation |
-| `make lint` | Run linter (golangci-lint) |
-| `make test` | Run tests with coverage |
-| `make fmt` | Format code (gofumpt + golines) |
-| `make mock` | Generate mocks (mockgen) |
-
-### Running the Application
-
-- **With Docker:**
-  ```sh
-  docker-compose up --build
-  ```
-
-- **Locally:**
-  ```sh
-  go run ./cmd/api/main.go
-  ```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).

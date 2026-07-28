@@ -8,7 +8,6 @@ import (
 
 	"go-clean-arch/internal/user/domain"
 	"go-clean-arch/internal/user/usecase/dto"
-	"go-clean-arch/pkg/auth"
 )
 
 // TokenTTLs holds the TTL configuration for tokens.
@@ -20,7 +19,7 @@ type TokenTTLs struct {
 // UserManager handles user registration, login, and queries.
 type UserManager struct {
 	userRepo       UserRepository
-	tokenService   auth.TokenService
+	tokenIssuer    TokenIssuer
 	passwordHasher PasswordHasher
 	ttls           TokenTTLs
 }
@@ -28,13 +27,13 @@ type UserManager struct {
 // NewUserManager creates a new UserManager instance.
 func NewUserManager(
 	userRepo UserRepository,
-	tokenService auth.TokenService,
+	tokenIssuer TokenIssuer,
 	passwordHasher PasswordHasher,
 	ttls TokenTTLs,
 ) *UserManager {
 	return &UserManager{
 		userRepo:       userRepo,
-		tokenService:   tokenService,
+		tokenIssuer:    tokenIssuer,
 		passwordHasher: passwordHasher,
 		ttls:           ttls,
 	}
@@ -44,7 +43,7 @@ func NewUserManager(
 func (m *UserManager) SignUp(ctx context.Context, params dto.SignUpParams) (*domain.User, error) {
 	_, err := m.userRepo.FindByEmail(ctx, params.Email)
 	if err == nil {
-		return nil, domain.ErrUserAlreadyExists
+		return nil, newDomainApplicationError(domain.ErrUserAlreadyExists)
 	}
 	if !errors.Is(err, domain.ErrUserNotFound) {
 		return nil, fmt.Errorf("failed to check existing user: %w", err)
@@ -57,11 +56,15 @@ func (m *UserManager) SignUp(ctx context.Context, params dto.SignUpParams) (*dom
 
 	user, err := domain.NewUser(params.Username, params.Email, hashedPassword)
 	if err != nil {
-		return nil, err
+		return nil, newDomainApplicationError(err)
 	}
 
 	created, err := m.userRepo.Create(ctx, *user)
 	if err != nil {
+		var appErr *ApplicationError
+		if errors.As(err, &appErr) {
+			return nil, appErr
+		}
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 	return &created, nil
@@ -72,13 +75,23 @@ func (m *UserManager) Login(ctx context.Context, params dto.LoginParams) (*dto.A
 	user, err := m.userRepo.FindByEmail(ctx, params.Email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return nil, ErrInvalidCredentials
+			return nil, NewApplicationError(
+				ErrorCodeInvalidCredentials,
+				StatusUnauthorized,
+				ErrInvalidCredentials.Error(),
+				ErrInvalidCredentials,
+			)
 		}
 		return nil, fmt.Errorf("failed to query user: %w", err)
 	}
 
 	if err := m.passwordHasher.Verify(params.Password, user.Password); err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, NewApplicationError(
+			ErrorCodeInvalidCredentials,
+			StatusUnauthorized,
+			ErrInvalidCredentials.Error(),
+			ErrInvalidCredentials,
+		)
 	}
 
 	return m.issueTokens(user.ID)
@@ -86,24 +99,17 @@ func (m *UserManager) Login(ctx context.Context, params dto.LoginParams) (*dto.A
 
 // issueTokens generates an access token and a refresh token.
 func (m *UserManager) issueTokens(userID uint) (*dto.AuthTokens, error) {
-	req := auth.GenerateTokenRequest{UserID: userID}
-
-	req.ExpireAt = time.Now().Add(m.ttls.Access)
-	access, err := m.tokenService.GenerateToken(req)
+	access, err := m.tokenIssuer.IssueAccessToken(userID, time.Now().Add(m.ttls.Access))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	req.ExpireAt = time.Now().Add(m.ttls.Refresh)
-	refresh, err := m.tokenService.GenerateToken(req)
+	refresh, err := m.tokenIssuer.IssueRefreshToken(userID, time.Now().Add(m.ttls.Refresh))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	return &dto.AuthTokens{
-		AccessToken:  access.TokenString,
-		RefreshToken: refresh.TokenString,
-	}, nil
+	return &dto.AuthTokens{AccessToken: access, RefreshToken: refresh}, nil
 }
 
 // FindByID finds a user by ID.
@@ -124,9 +130,20 @@ func (m *UserManager) FindByEmail(ctx context.Context, email string) (*domain.Us
 	return &user, nil
 }
 
+func newDomainApplicationError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrUserAlreadyExists):
+		return NewApplicationError(ErrorCodeUserAlreadyExists, StatusConflict, err.Error(), err)
+	case errors.Is(err, domain.ErrUserNotFound):
+		return NewApplicationError(ErrorCodeUserNotFound, StatusNotFound, err.Error(), err)
+	default:
+		return NewApplicationError(ErrorCodeInvalidArgument, StatusBadRequest, err.Error(), err)
+	}
+}
+
 func mapFindUserErr(err error) error {
 	if errors.Is(err, domain.ErrUserNotFound) {
-		return domain.ErrUserNotFound
+		return newDomainApplicationError(domain.ErrUserNotFound)
 	}
 	return fmt.Errorf("failed to find user: %w", err)
 }

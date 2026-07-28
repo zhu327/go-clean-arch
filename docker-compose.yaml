@@ -9,30 +9,31 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-postgres}
       DB_PORT: ${DB_PORT:-5432}
-    env_file:
-      - .env
-    restart: always
+      PORT: ${PORT:-8000}
+      # The application refuses an empty or short key during startup.
+      SECRET_KEY: ${SECRET_KEY:-}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-20m}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-168h}
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${HOST_PORT:-8000}:${PORT:-8000}"
     depends_on:
       db:
         condition: service_healthy
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
 
   db:
-    image: postgres:alpine
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-    command: postgres -c log_statement=all
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-postgres}
     volumes:
-    - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
+
 volumes:
   postgres-data:

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"go-clean-arch/internal/shared/adapter/delivery/http/middleware"
 	"go-clean-arch/internal/user/adapter/delivery/http/handler"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ func (r *UserRegistrar) RegisterRoutes(api *gin.RouterGroup, authMW gin.HandlerF
 
 func RegisterUserRoutes(api *gin.RouterGroup, userHandler *handler.UserHandler, authMiddleware gin.HandlerFunc) {
 	auth := api.Group("/auth")
+	auth.Use(middleware.AuthEndpointProtection(middleware.AuthEndpointProtectionConfig{}))
 	{
 		auth.POST("/login", userHandler.Login)
 		auth.POST("/signup", userHandler.SignUp)

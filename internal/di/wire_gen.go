@@ -20,20 +20,20 @@ import (
 
 // Injectors from wire.go:
 
-// InitializeAPI builds and injects all dependencies, returning the HTTP server.
 func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	gormDB, err := db.ConnectDatabase(cfg)
 	if err != nil {
 		return nil, err
 	}
 	userRepository := repository.NewUserRepository(gormDB)
-	tokenService := auth.NewTokenService(cfg)
+	typedTokenService := auth.NewTokenService(cfg)
 	bcryptHasher := crypto.NewBcryptHasher()
 	tokenTTLs := provideTokenTTLs(cfg)
-	userManager := usecase.NewUserManager(userRepository, tokenService, bcryptHasher, tokenTTLs)
+	userManager := usecase.NewUserManager(userRepository, typedTokenService, bcryptHasher, tokenTTLs)
 	userHandler := handler.NewUserHandler(userManager)
 	userRegistrar := router.NewUserRegistrar(userHandler)
-	registrars := provideRegistrars(userRegistrar)
-	server := delivery.NewServer(cfg, registrars, tokenService)
+	v := provideRegistrars(userRegistrar)
+	v2 := provideDatabaseCleanup(gormDB)
+	server := delivery.NewServer(cfg, v, typedTokenService, v2)
 	return server, nil
 }

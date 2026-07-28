@@ -3,13 +3,20 @@ package usecase
 import (
 	"context"
 	"errors"
+	"time"
 
 	"go-clean-arch/internal/user/domain"
 )
 
-//go:generate mockgen -source=interfaces.go -destination=mock/interfaces.go -package=mock PasswordHasher,UserRepository
+//go:generate mockgen -source=interfaces.go -destination=mock/interfaces.go -package=mock PasswordHasher,TokenIssuer,UserRepository
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
+
+// TokenIssuer issues tokens with an explicit, use-case-owned purpose.
+type TokenIssuer interface {
+	IssueAccessToken(userID uint, expireAt time.Time) (string, error)
+	IssueRefreshToken(userID uint, expireAt time.Time) (string, error)
+}
 
 // PasswordHasher hashes and verifies passwords.
 type PasswordHasher interface {
