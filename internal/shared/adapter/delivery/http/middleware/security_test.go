@@ -137,7 +137,7 @@ func TestAuthEndpointProtectionRejectsChunkedOversizeBodyWithErrorResponse(t *te
 		var payload any
 		if err := c.ShouldBindJSON(&payload); err != nil {
 			if _, tooLarge := err.(*http.MaxBytesError); tooLarge {
-				_ = c.Error(utils.NewAppError(http.StatusRequestEntityTooLarge, "request body too large"))
+				_ = c.Error(utils.PayloadTooLargeError("request body too large"))
 				return
 			}
 			_ = c.Error(utils.BadRequestError(err.Error()))

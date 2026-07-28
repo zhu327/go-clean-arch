@@ -31,27 +31,6 @@ func jsonError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, ErrorResponse{Code: code, Message: message})
 }
 
-func statusCode(status int) string {
-	switch status {
-	case http.StatusBadRequest:
-		return "bad_request"
-	case http.StatusUnauthorized:
-		return "unauthorized"
-	case http.StatusForbidden:
-		return "forbidden"
-	case http.StatusNotFound:
-		return "not_found"
-	case http.StatusConflict:
-		return "conflict"
-	case http.StatusRequestEntityTooLarge:
-		return "payload_too_large"
-	case http.StatusTooManyRequests:
-		return "rate_limited"
-	default:
-		return "internal"
-	}
-}
-
 // Recovery converts panics to the JSON error contract.
 func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -76,9 +55,11 @@ func ErrorHandler() gin.HandlerFunc {
 		}
 
 		err := c.Errors.Last().Err
-		var appErr *utils.AppError
-		if errors.As(err, &appErr) {
-			if appErr.Internal != "" {
+
+		var transportErr TransportError
+		if errors.As(err, &transportErr) {
+			var appErr *utils.AppError
+			if errors.As(err, &appErr) && appErr.Internal != "" {
 				log.Error(
 					"request error",
 					"path",
@@ -89,12 +70,6 @@ func ErrorHandler() gin.HandlerFunc {
 					appErr.Internal,
 				)
 			}
-			jsonError(c, appErr.Code, statusCode(appErr.Code), appErr.Message)
-			return
-		}
-
-		var transportErr TransportError
-		if errors.As(err, &transportErr) {
 			jsonError(c, transportErr.HTTPStatusCode(), transportErr.ErrorCode(), transportErr.ErrorMessage())
 			return
 		}

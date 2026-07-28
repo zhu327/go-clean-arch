@@ -94,13 +94,13 @@ func AuthEndpointProtection(config AuthEndpointProtectionConfig) gin.HandlerFunc
 	limiter := newAuthRateLimiter(config)
 	return func(c *gin.Context) {
 		if c.Request.ContentLength > config.MaxBodyBytes {
-			_ = c.Error(utils.NewAppError(http.StatusRequestEntityTooLarge, "request body too large"))
+			_ = c.Error(utils.PayloadTooLargeError("request body too large"))
 			c.Abort()
 			return
 		}
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, config.MaxBodyBytes)
 		if !limiter.allow(c.ClientIP(), limiter.config.Now()) {
-			_ = c.Error(utils.NewAppError(http.StatusTooManyRequests, "too many requests"))
+			_ = c.Error(utils.TooManyRequestsError("too many requests"))
 			c.Abort()
 			return
 		}

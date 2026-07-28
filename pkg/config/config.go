@@ -16,6 +16,7 @@ type Config struct {
 	DBUser          string
 	DBPassword      string
 	DBPort          string
+	DBTimezone      string
 	SecretKey       string
 	Port            string
 	AccessTokenTTL  time.Duration
@@ -23,7 +24,7 @@ type Config struct {
 }
 
 var envs = []string{
-	"DB_HOST", "DB_NAME", "DB_USER", "DB_PORT", "DB_PASSWORD",
+	"DB_HOST", "DB_NAME", "DB_USER", "DB_PORT", "DB_PASSWORD", "DB_TIMEZONE",
 	"SECRET_KEY", "PORT", "ACCESS_TOKEN_TTL", "REFRESH_TOKEN_TTL",
 }
 
@@ -51,6 +52,9 @@ func loadConfig(path string, lookupEnv func(string) (string, bool)) (Config, err
 	}
 	if values["REFRESH_TOKEN_TTL"] == "" {
 		values["REFRESH_TOKEN_TTL"] = "168h"
+	}
+	if values["DB_TIMEZONE"] == "" {
+		values["DB_TIMEZONE"] = "Asia/Shanghai"
 	}
 	return configFromValues(values)
 }
@@ -104,12 +108,15 @@ func configFromValues(values map[string]string) (Config, error) {
 	if err := validatePort("DB_PORT", values["DB_PORT"]); err != nil {
 		return Config{}, err
 	}
+	if _, err := time.LoadLocation(values["DB_TIMEZONE"]); err != nil {
+		return Config{}, fmt.Errorf("DB_TIMEZONE must be a valid IANA timezone: %w", err)
+	}
 	if err := validatePort("PORT", values["PORT"]); err != nil {
 		return Config{}, err
 	}
 	return Config{
 		DBHost: values["DB_HOST"], DBName: values["DB_NAME"], DBUser: values["DB_USER"],
-		DBPassword: values["DB_PASSWORD"], DBPort: values["DB_PORT"], SecretKey: values["SECRET_KEY"],
+		DBPassword: values["DB_PASSWORD"], DBPort: values["DB_PORT"], DBTimezone: values["DB_TIMEZONE"], SecretKey: values["SECRET_KEY"],
 		Port: values["PORT"], AccessTokenTTL: accessTTL, RefreshTokenTTL: refreshTTL,
 	}, nil
 }

@@ -14,6 +14,7 @@ func validValues() map[string]string {
 		"DB_USER":           "app",
 		"DB_PASSWORD":       "password",
 		"DB_PORT":           "5432",
+		"DB_TIMEZONE":       "Asia/Shanghai",
 		"SECRET_KEY":        "12345678901234567890123456789012",
 		"PORT":              "8000",
 		"ACCESS_TOKEN_TTL":  "20m",
@@ -23,7 +24,7 @@ func validValues() map[string]string {
 
 func TestLoadConfigFromFile_EnvironmentOverridesDotEnv(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".env")
-	if err := os.WriteFile(path, []byte("DB_HOST=file-db\nDB_NAME=app\nDB_USER=app\nDB_PASSWORD=password\nDB_PORT=5432\nSECRET_KEY=12345678901234567890123456789012\nPORT=8000\nACCESS_TOKEN_TTL=20m\nREFRESH_TOKEN_TTL=168h\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("DB_HOST=file-db\nDB_NAME=app\nDB_USER=app\nDB_PASSWORD=password\nDB_PORT=5432\nDB_TIMEZONE=UTC\nSECRET_KEY=12345678901234567890123456789012\nPORT=8000\nACCESS_TOKEN_TTL=20m\nREFRESH_TOKEN_TTL=168h\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -49,6 +50,7 @@ func TestLoadConfigFromFile_RejectsInvalidConfiguration(t *testing.T) {
 		"server port out of range":            func(v map[string]string) { v["PORT"] = "0" },
 		"non-positive access TTL":             func(v map[string]string) { v["ACCESS_TOKEN_TTL"] = "0s" },
 		"refresh TTL shorter than access TTL": func(v map[string]string) { v["REFRESH_TOKEN_TTL"] = "10m" },
+		"invalid database timezone":           func(v map[string]string) { v["DB_TIMEZONE"] = "Not/A/Zone" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			values := validValues()

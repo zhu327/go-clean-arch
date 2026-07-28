@@ -99,7 +99,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 func requestBodyError(err error) error {
 	var tooLarge *http.MaxBytesError
 	if errors.As(err, &tooLarge) {
-		return utils.NewAppError(http.StatusRequestEntityTooLarge, "request body too large")
+		return utils.PayloadTooLargeError("request body too large")
 	}
 	return utils.BadRequestError(err.Error())
 }

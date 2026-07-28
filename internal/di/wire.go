@@ -21,6 +21,7 @@ func InitializeAPI(cfg config.Config) (*delivery.Server, error) {
 	wire.Build(
 		db.ConnectDatabase,
 		auth.NewTokenService,
+		wire.Bind(new(userUsecase.TokenIssuer), new(auth.TypedTokenService)),
 		crypto.NewBcryptHasher,
 		wire.Bind(new(userUsecase.PasswordHasher), new(*crypto.BcryptHasher)),
 		userRepo.NewUserRepository,
