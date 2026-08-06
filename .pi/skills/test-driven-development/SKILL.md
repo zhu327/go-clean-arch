@@ -1,53 +1,55 @@
 ---
 name: test-driven-development
-description: Use before implementation code for a feature, bug fix, refactor, or behavior change. Enforces red-green-refactor without assuming a language or test framework.
+description: Select and apply behavior-focused verification for features, bug fixes, and refactors. Prefer test-first where it produces a meaningful failure signal; adapt for legacy characterization, generated code, configuration, and mechanical changes.
 ---
 
-# Test-Driven Development
+# Behavior-Focused Development
 
-## Iron Law
+The goal is credible, repeatable evidence that the requested behavior works—not compliance with a ritual.
 
-**Do not add production behavior before a test demonstrates the missing behavior.**
+## Choose the verification strategy
 
-Exceptions—generated code, declarative configuration, exploratory prototypes, and changes that cannot be meaningfully tested—require explicit user agreement and a documented alternative verification method.
+- **Reproducible bug:** add a regression test that fails for the reported defect before fixing it.
+- **Business rule, parser/validator, state transition, or edge-heavy logic:** prefer red → green → refactor, one behavior at a time.
+- **Ordinary new behavior:** add or update behavior-focused tests; test-first is the default when practical.
+- **Legacy behavior:** characterization tests may first capture current behavior before refactoring.
+- **Mechanical refactor:** use the existing suite as the safety net; add tests only for an uncovered behavior risk.
+- **Generated code or declarative configuration:** use the project's generator, schema check, build, or validator.
+- **Exploratory prototype:** exploration may precede tests; agree on verification before treating it as production work.
+- **Not meaningfully automatable:** obtain agreement on an explicit alternative check.
 
-## Red → Green → Refactor
+## Test-first loop
 
-For one behavior at a time (or a closely related batch of at most four):
+When test-first applies:
 
-1. **Red:** write the smallest test that describes the desired observable behavior.
-2. **Verify red:** run the project’s focused test command. Confirm it fails because the behavior is missing, not because of setup, syntax, or an unrelated failure.
-3. **Green:** write the smallest production change that makes the test pass.
-4. **Verify green:** rerun the focused test and then the relevant broader suite.
-5. **Refactor:** improve duplication or clarity only while the tests remain green.
+1. Add the smallest test for an observable behavior.
+2. Run the focused command discovered from the repository.
+3. Confirm it fails because the behavior is missing, not because setup is broken.
+4. Make the smallest production change that passes.
+5. Run the focused test, then the relevant broader suite.
+6. Refactor only while checks remain green.
 
-Discover test commands from the repository’s package manifest, build scripts, CI, Makefile, or existing test documentation. Never prescribe a runner, path convention, assertion library, or language syntax.
+## Test quality
 
-## Good Tests
+Prefer tests that:
 
-Tests should:
+- assert returned values, persisted state, emitted events, rendered output, or documented external interactions;
+- remain valid through internal refactors;
+- use real lightweight collaborators or fakes before interaction-heavy mocks;
+- cover important errors and boundaries implied by the requirement;
+- create isolated data and avoid order, timing, or shared-state dependencies.
 
-- describe one externally meaningful behavior with a clear name;
-- assert outcomes, contracts, state changes, or interactions at a genuine seam;
-- use real collaborators when practical and fakes/mocks only where isolation is necessary;
-- cover success, failure, and relevant boundary cases;
-- remain valid through internal refactors.
+Do not add a public production hook solely for tests. Build fixtures from the real contract rather than guessed partial objects.
 
-Avoid tests that only mirror implementation details, rely on order or time, share uncontrolled mutable state, or require production-only test hooks.
+Load `testing-anti-patterns.md` when adding mocks, fakes, fixtures, or test-only seams. Load `tdd-rationale.md` only when deciding whether test-first adds value for a disputed case.
 
-## Debugging and Refactoring
+## Completion evidence
 
-- A bug fix starts with a failing regression test.
-- When a test is difficult to write, first reconsider the interface and dependency shape; do not immediately add test-only public APIs.
-- If a refactor changes behavior, use the same red-green-refactor cycle. Purely mechanical formatting may use existing tests as the safety net.
+Report:
 
-## Completion Checklist
+- the behavior covered and at what test level;
+- commands actually run and their results;
+- any alternative verification used;
+- untested or unavailable checks and their residual risk.
 
-- [ ] Each new behavior has a test or an explicitly approved alternative verification method.
-- [ ] The new tests were observed failing for the intended reason.
-- [ ] Production changes were minimal and followed the failing test.
-- [ ] Focused and relevant full suites pass.
-- [ ] Edge cases and errors implied by requirements are covered.
-- [ ] The project’s available validation commands pass.
-
-For rationale and common test smells, read `tdd-rationale.md` and `testing-anti-patterns.md`.
+An applicable failing check blocks completion. A test tool the project does not provide is a gap to report, not a reason to invent infrastructure automatically.

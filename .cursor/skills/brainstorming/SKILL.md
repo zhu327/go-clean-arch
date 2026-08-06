@@ -1,53 +1,42 @@
 ---
 name: brainstorming
-description: Explore user intent and turn ideas into fully formed designs through collaborative dialogue. Use before creating features, building components, adding functionality, or modifying behavior. Ensures requirements are clear before implementation begins.
+description: Clarify consequential product or architecture decisions before implementation. Use when requirements have materially different interpretations, durable trade-offs, or high-cost decisions; do not use for clear local changes.
 ---
 
-# Brainstorming Ideas Into Designs
+# Brainstorming Consequential Changes
 
-## Overview
+Use this skill to resolve decisions that would materially change behavior, architecture, compatibility, cost, or delivery risk. It is not a required prelude to every code change.
 
-Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+## 1. Ground the discussion
 
-Start by understanding the current project context, then ask questions to refine the idea. Once you understand what you're building, present the design in small sections (200-300 words), checking after each section whether it looks right so far.
+Read `.cursor/rules/`, relevant code, tests, recent history, and architecture records. Separate:
 
-## The Process
+- facts established by the repository;
+- assumptions that are safe and reversible;
+- unresolved decisions that could change the solution.
 
-**IMPORTANT:** Ask questions in chat with structured options (lettered/numbered choices). Prefer multiple choice over open-ended when possible — do not invent a non-existent question tool.
+Do not ask the user for facts available in the repository.
 
-**Understanding the idea:**
-- Check out the current project state first (files, docs, recent commits)
-- Batch related questions together (2-5 per message), split only when answers have dependencies
-- Prefer multiple choice questions when possible, but open-ended is fine too
-- Focus on understanding: purpose, constraints, success criteria
+## 2. Clarify only material unknowns
 
-**Exploring approaches:**
-- Propose 2-3 different approaches with trade-offs
-- Present options conversationally with your recommendation and reasoning
-- Lead with your recommended option and explain why
+Group related blocking questions. Prefer concrete choices when the real alternatives are known; allow free text when they are not.
 
-**Presenting the design:**
-- Once you believe you understand what you're building, present the design
-- Break it into sections of 200-300 words
-- Ask after each section whether it looks right so far
-- Cover: architecture, components, data flow, error handling, testing
-- Be ready to go back and clarify if something doesn't make sense
+Proceed without a question when a reasonable assumption is low-risk and easy to reverse. State that assumption before implementation.
 
-## After the Design
+## 3. Compare real alternatives
 
-**Documentation:**
-- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+When multiple credible approaches exist, present the smallest useful set—usually two. Explain the trade-off that matters for go-clean-arch and recommend a default.
 
-**Implementation (if continuing):**
-- Ask: "Ready to set up for implementation?"
-- Read and follow `writing-plans` skill to create detailed implementation plan
+Do not manufacture alternatives to satisfy a quota. If one approach follows clearly from project constraints, explain it directly.
 
-## Key Principles
+## 4. Confirm the decision
 
-- **Structured options in chat** - Present lettered/numbered choices; avoid vague open prompts when a short option list works
-- **Batch related questions** - Ask related questions together (2-5 per message), split only when answers have dependencies
-- **Multiple choice preferred** - Easier to answer than open-ended when possible
-- **YAGNI ruthlessly** - Remove unnecessary features from all designs
-- **Explore alternatives** - Always propose 2-3 approaches before settling
-- **Incremental validation** - Present design in sections, validate each
-- **Be flexible** - Go back and clarify when something doesn't make sense
+Summarize the agreed behavior, affected DDD/Clean Architecture layers, important failure handling, validation strategy, and deferred scope. Ask for approval once when the decision is consequential.
+
+Save a design record only when it must survive the session, requires team approval, or captures migration/compatibility decisions. Use the existing project location; otherwise use `docs/plans/YYYY-MM-DD-<topic>-design.md`.
+
+## Handoff
+
+- A clear local change may proceed directly.
+- A multi-step or cross-domain change may use `writing-plans`.
+- A destructive or hard-to-reverse change must include verification and rollback before execution.

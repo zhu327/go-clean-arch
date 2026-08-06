@@ -19,13 +19,7 @@ If requirements, acceptance criteria, dependencies, assumptions, or the implemen
 
 ## Your Job
 
-Follow `test-driven-development`:
-
-1. write a failing test for each behavior;
-2. verify it fails for the expected reason using the project’s focused test command;
-3. make the minimal change to pass;
-4. rerun focused and relevant broader validation;
-5. refactor only while tests remain green.
+Follow the verification strategy specified by the task and `.cursor/rules/30-testing.mdc`. Load `test-driven-development` when choosing among regression-first, behavior test-first, characterization, existing-suite, or generator/validator-based approaches. For a reproducible bug or suitable new behavior, prefer a focused failing test before production changes. Report any justified alternative explicitly.
 
 Work only in: [allowed file list].
 
@@ -61,7 +55,7 @@ Do not create or modify files outside your allowed list. If additional files are
 
 ## Prior-Wave Dependencies
 
-The controller must read actual completed artifacts and paste the relevant declarations—not a summary—into downstream prompts:
+The controller must read actual completed artifacts and provide exact relevant declarations—not only a prose summary—in downstream prompts:
 
 ```text
 ## Prior-Wave Dependencies

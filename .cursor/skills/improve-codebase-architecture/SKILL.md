@@ -1,51 +1,46 @@
 ---
 name: improve-codebase-architecture
-description: Find deepening opportunities in any codebase. Use when the user wants to improve architecture, consolidate tightly coupled modules, improve testability, or make a codebase easier to navigate.
+description: Find evidence-backed deepening opportunities in go-clean-arch. Use for architecture assessment, consolidation of tightly coupled modules, testability improvements, or navigation friction; supports quick conversational assessment and formal review.
 disable-model-invocation: true
 ---
 
 # Improve Codebase Architecture
 
-Surface architectural friction and propose refactors that make modules deeper: more useful behavior behind a smaller, clearer interface. The aim is testability, locality, and navigability.
+Surface architectural friction and propose refactors that place useful behavior behind smaller, clearer interfaces. Preserve go-clean-arch domain and layer terminology; use depth, seam, leverage, and locality when they add precision.
 
-Use the vocabulary defined in [LANGUAGE.md](LANGUAGE.md): module, interface, implementation, depth, seam, adapter, leverage, and locality.
+## 1. Gather context
 
-## 1. Gather Context
+Read relevant `.cursor/rules/`, source, tests, recent history, and architecture records. Determine actual DDD/Clean Architecture ownership, dependency direction, conventions, and constraints. Do not invent a module boundary or generic abstraction that conflicts with the repository.
 
-Inspect project instructions, architecture documents, ADRs, source layout, build configuration, and tests. Determine the project’s real module boundaries, vocabulary, conventions, and constraints. If no explicit architecture documentation exists, state that limitation rather than inventing one.
+## 2. Choose review depth
 
-Do not assume a programming language, framework, directory layout, delivery mechanism, report renderer, or architecture style.
+- **Quick assessment:** inspect the relevant domain/layers directly and return a few evidence-backed candidates in conversation.
+- **Formal review:** for broad scope or a durable artifact, use a read-only exploration subagent and save a report to the project's existing architecture-review location, or `docs/architecture-reviews/YYYY-MM-DD-<topic>.md`.
 
-## 2. Explore
+Do not require a report, subagent, or diagram for a focused question.
 
-Use a read-only exploration subagent to inspect the codebase. Look for friction:
+## 3. Explore friction
 
-- understanding one concept requires bouncing across shallow modules;
-- callers must know implementation details that should be hidden;
-- tests must cross an internal seam instead of the module’s external interface;
-- behavior and knowledge are duplicated across callers;
-- a seam leaks implementation concerns or has no meaningful variation;
-- existing module boundaries diverge from documented project architecture.
+Look for:
 
-Apply the deletion test: if removing a module makes complexity vanish, it was probably pass-through indirection; if complexity would reappear across callers, it may be earning its keep.
+- one domain concept requiring jumps across many shallow modules;
+- callers knowing repository/gateway details that a usecase interface should hide;
+- business rules leaking into handlers, repositories, gateways, tasks, or Wire setup;
+- tests crossing internal details instead of a stable behavior surface;
+- duplicated decisions across domains or adapters;
+- pass-through interfaces with no meaningful variation;
+- actual dependencies diverging from `.cursor/rules/`.
 
-## 3. Report Candidates
+Apply the deletion test: if removing a module makes complexity vanish, it may be pass-through indirection; if complexity reappears across callers, it may provide leverage.
 
-Save a Markdown report to the project’s existing architecture-review location, or `docs/architecture-reviews/YYYY-MM-DD-<topic>.md` if none exists. For every candidate include:
+## 4. Present candidates
 
-- files/modules involved;
-- problem and evidence;
-- proposed change in plain language;
-- expected leverage and locality gains;
-- before/after diagram using Mermaid when useful;
-- recommendation strength: **Strong**, **Worth exploring**, or **Speculative**.
+For each candidate include files, evidence, proposed change, expected locality/leverage or test-surface gain, risks, and recommendation strength: **Strong**, **Worth exploring**, or **Speculative**. Use Mermaid or HTML only when it clarifies relationships better than prose.
 
-End with a top recommendation and its rationale. Do not propose detailed interfaces until the user selects a candidate.
+Do not design a detailed replacement interface until the user selects a candidate, unless an end-to-end proposal was explicitly requested. Ask which candidate to explore when several remain credible.
 
-## 4. Design Discussion
+## 5. Design and plan
 
-After selection, use structured questions to clarify constraints, dependencies, seam placement, hidden implementation details, and the tests that survive the refactor. Use [DEEPENING.md](DEEPENING.md) and [INTERFACE-DESIGN.md](INTERFACE-DESIGN.md) as needed.
+Use [DEEPENING.md](DEEPENING.md) for dependency strategy and [INTERFACE-DESIGN.md](INTERFACE-DESIGN.md) when alternatives need comparison. Preserve existing project terms such as domain, usecase, repository, gateway, handler, router, and Wire.
 
-## 5. Plan
-
-Once the design is agreed, hand off to `writing-plans`. The plan should preserve the project’s conventions, test through the selected module’s interface, and remove superseded shallow-module tests when safe.
+Once a consequential design is agreed, use `writing-plans` when a durable multi-step plan is justified. Test through the selected behavior surface and remove superseded shallow tests only when replacement coverage is credible.

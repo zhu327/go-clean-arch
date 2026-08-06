@@ -1,36 +1,36 @@
 # Interface Design
 
-Use this process when the user wants to compare alternative interfaces for a selected deepening candidate. It follows “design it twice”: the first plausible interface is rarely the only useful one.
+Use this process when the user wants to compare alternative interfaces for a selected architecture candidate. Preserve kfinops domain/layer terminology and use depth, seam, adapter, leverage, and locality when helpful.
 
-Use the vocabulary from [LANGUAGE.md](LANGUAGE.md): module, interface, seam, adapter, leverage, and locality.
+## 1. Frame the problem
 
-## 1. Frame the Problem
+Explain:
 
-Before dispatching subagents, explain:
+- constraints every interface must satisfy;
+- dependencies and their categories from [DEEPENING.md](DEEPENING.md);
+- relevant `.cursor/rules/` and existing project conventions;
+- a small illustrative sketch in Go that grounds constraints without becoming the proposal.
 
-- the constraints every interface must satisfy;
-- the dependencies and their categories from [DEEPENING.md](DEEPENING.md);
-- a small illustrative sketch in the project’s actual language or notation.
+## 2. Generate alternatives
 
-This is context, not a proposed solution.
+Default to two credible alternatives in the current context. Do not manufacture a weak design merely to increase option count.
 
-## 2. Explore Alternatives
+For a long-lived public interface, irreversible migration, disputed architecture decision, or high uncertainty, dispatch 2–3 read-only design subagents in parallel. Give each the same concrete brief—files, coupling, dependency categories, layer rules, and what sits behind the seam—with relevant emphases such as:
 
-Dispatch at least three read-only design subagents in parallel. Give each a concrete brief with relevant files, coupling details, dependency categories, existing project conventions, and a distinct objective:
+- minimize the interface and maximize leverage;
+- optimize the common caller and safe defaults;
+- preserve a required extension or ports-and-adapters seam.
 
-1. minimize the interface and maximize leverage per entry point;
-2. optimize for extension and variation;
-3. optimize for the most common caller;
-4. when remote or external dependencies matter, design the port-and-adapter strategy.
+Do not optimize for generic flexibility without concrete consumers.
 
-Each subagent returns:
+Each design should provide:
 
-1. the interface, including invariants, ordering, error modes, and configuration requirements;
-2. an example of caller usage in the project’s language or notation;
-3. what the implementation hides behind the seam;
-4. the dependency and adapter strategy;
-5. trade-offs in leverage, locality, and complexity.
+1. interface plus invariants, ordering, errors, and configuration;
+2. a Go usage example;
+3. behavior hidden behind the seam;
+4. dependency and adapter strategy;
+5. trade-offs in leverage, locality, migration, and testability.
 
 ## 3. Compare
 
-Present alternatives sequentially, then compare depth, locality, seam placement, extension cost, and testability. Recommend one design—or a deliberate hybrid—with reasons. Do not select a design merely because it introduces more abstractions.
+Compare depth, locality, seam placement, compatibility, extension cost, and testability. Recommend one design—or a deliberate hybrid—with evidence. Do not prefer a design merely because it introduces more abstractions.

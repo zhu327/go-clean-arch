@@ -4,7 +4,7 @@ Non-negotiables for this review. Prefer deleting complexity over rearranging it.
 
 ## Non-negotiable
 
-1. **Do not let a PR push a file from under 1k lines to over 1k** without a strong structural reason. Prefer extract/split first.
+1. **Investigate significant file growth** when it adds responsibilities, mixes reasons to change, or makes review and focused testing difficult. Line count is a signal, not a blocker; generated, declarative, and coherent linear files may be large.
 2. **No spaghetti growth** — new ad-hoc conditionals, scattered special cases, or one-off branches in unrelated paths are design problems, not nits.
 3. **Bias to cleaner design** — same behavior, meaningfully simpler structure wins. Moving complexity around is not enough.
 4. **Direct over magical** — flag brittle/ad-hoc "magic", thin identity wrappers, pass-through helpers that buy no clarity.

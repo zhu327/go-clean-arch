@@ -5,13 +5,22 @@ description: Use after requirements or design are understood and before coding a
 
 # Writing Plans
 
-Write an executable implementation plan that tells an implementer what to change, how to verify it, and which work can proceed independently. Prefer small vertical slices, DRY, YAGNI, and test-first implementation.
+Write an executable plan when dependencies, contracts, risk, or handoff justify a durable artifact. Prefer small vertical slices, DRY, YAGNI, and behavior-focused verification.
 
-The plan defines contracts, files, acceptance criteria, and test scenarios. It does **not** include production method bodies or complete test code.
+For a small sequential change, use a lightweight in-session plan instead of this full template:
 
-**Announce at start:** “I'm using the writing-plans skill to create the implementation plan.”
+```markdown
+## Goal
+## Assumptions
+## Steps
+1. [change and focused verification]
+2. [change and focused verification]
+## Final validation
+```
 
-**Save plans to:** the project’s existing planning location; use `docs/plans/YYYY-MM-DD-<feature-name>.md` only when no local convention exists.
+Use the full format for cross-domain/layer work, parallel execution, high-risk changes, work spanning sessions, or approval. It defines contracts, files, acceptance criteria, and test scenarios without production method bodies or complete test code.
+
+Save durable plans to the project's existing planning location; use `docs/plans/YYYY-MM-DD-<feature-name>.md` only when no convention exists.
 
 ## 1. Gather Context
 
@@ -56,7 +65,7 @@ Every plan begins with:
 | 1 | AFK | None | 2 |
 ```
 
-For every task, use this structure:
+For every task in a full plan, use this structure. Omit sections that genuinely do not apply rather than manufacturing content:
 
 ```markdown
 ### Task N: [Vertical Slice Name]
@@ -122,4 +131,4 @@ Before handoff, confirm:
 
 ## Handoff
 
-Hand the saved plan to `subagent-driven-development`. In a standalone invocation, ask before execution; in an approved autonomous pipeline, continue automatically. Provide each implementer the full task text rather than asking it to rediscover the plan.
+Execute sequentially when tasks share evolving context, interfaces, generated outputs, or files. Hand the plan to `subagent-driven-development` only when independent slices have stable contracts, non-overlapping write sets, and plausible parallel benefit. In standalone use, ask before execution; in an approved autonomous pipeline, continue. Provide each implementer the full task text rather than asking it to rediscover the plan.

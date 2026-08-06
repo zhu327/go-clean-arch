@@ -1,53 +1,46 @@
 ---
 name: test-driven-development
-description: Use before implementation code for a feature, bug fix, refactor, or behavior change. Enforces red-green-refactor without assuming a language or test framework.
+description: Select and apply behavior-focused verification for go-clean-arch features, bug fixes, and refactors. Prefer test-first where it produces a meaningful failure signal; adapt for legacy characterization, generated code, configuration, and mechanical changes.
 ---
 
-# Test-Driven Development
+# Behavior-Focused Development
 
-## Iron Law
+The goal is credible, repeatable evidence that requested behavior works—not compliance with a ritual. Follow project-specific testing conventions in `.cursor/rules/30-testing.mdc` where they apply.
 
-**Do not add production behavior before a test demonstrates the missing behavior.**
+## Choose the verification strategy
 
-Exceptions—generated code, declarative configuration, exploratory prototypes, and changes that cannot be meaningfully tested—require explicit user agreement and a documented alternative verification method.
+- **Reproducible bug:** add a regression test that fails for the defect before fixing it.
+- **Business rule, parser/validator, state transition, or edge-heavy logic:** prefer red → green → refactor.
+- **Ordinary new behavior:** add or update behavior-focused tests; test-first is the default when practical.
+- **Legacy behavior:** characterization tests may capture current behavior before refactoring.
+- **Mechanical refactor:** use the existing suite; add tests only for an uncovered behavior risk.
+- **Generated code or declarative configuration:** use `make mock`, `make di`, `make doc`, build, or the relevant validator when inputs change.
+- **Exploratory prototype:** exploration may precede tests; agree on verification before production use.
+- **Not meaningfully automatable:** agree on an explicit alternative check.
 
-## Red → Green → Refactor
+## Test-first loop
 
-For one behavior at a time (or a closely related batch of at most four):
+When test-first applies:
 
-1. **Red:** write the smallest test that describes the desired observable behavior.
-2. **Verify red:** run the project’s focused test command. Confirm it fails because the behavior is missing, not because of setup, syntax, or an unrelated failure.
-3. **Green:** write the smallest production change that makes the test pass.
-4. **Verify green:** rerun the focused test and then the relevant broader suite.
-5. **Refactor:** improve duplication or clarity only while the tests remain green.
+1. Add the smallest observable behavior test.
+2. Run a focused `go test` command derived from the package.
+3. Confirm it fails for the missing behavior, not broken setup.
+4. Make the smallest production change that passes.
+5. Run the focused test and affected package/domain suite.
+6. Refactor only while checks remain green.
 
-Discover test commands from the repository’s package manifest, build scripts, CI, Makefile, or existing test documentation. Never prescribe a runner, path convention, assertion library, or language syntax.
+## go-clean-arch defaults
 
-## Good Tests
+- Prefer table-driven tests when several cases share setup and behavior.
+- Use `testify` assertions and `gomock` following existing package conventions.
+- Regenerate mocks only when their source interfaces change.
+- Handler tests should exercise Gin/HTTP behavior through `httptest`; broader E2E is risk- and harness-driven.
+- Treat coverage as a diagnostic signal. Do not add low-value assertions solely to reach a numeric target.
 
-Tests should:
+Prefer observable outputs, persisted state, events, response contracts, and documented external interactions over mock-call-only assertions. Do not add production APIs solely for tests or build fixtures from guessed partial contracts.
 
-- describe one externally meaningful behavior with a clear name;
-- assert outcomes, contracts, state changes, or interactions at a genuine seam;
-- use real collaborators when practical and fakes/mocks only where isolation is necessary;
-- cover success, failure, and relevant boundary cases;
-- remain valid through internal refactors.
+Load `testing-anti-patterns.md` when adding mocks, fakes, fixtures, or test-only seams. Load `tdd-rationale.md` only when test order is disputed.
 
-Avoid tests that only mirror implementation details, rely on order or time, share uncontrolled mutable state, or require production-only test hooks.
+## Completion evidence
 
-## Debugging and Refactoring
-
-- A bug fix starts with a failing regression test.
-- When a test is difficult to write, first reconsider the interface and dependency shape; do not immediately add test-only public APIs.
-- If a refactor changes behavior, use the same red-green-refactor cycle. Purely mechanical formatting may use existing tests as the safety net.
-
-## Completion Checklist
-
-- [ ] Each new behavior has a test or an explicitly approved alternative verification method.
-- [ ] The new tests were observed failing for the intended reason.
-- [ ] Production changes were minimal and followed the failing test.
-- [ ] Focused and relevant full suites pass.
-- [ ] Edge cases and errors implied by requirements are covered.
-- [ ] The project’s available validation commands pass.
-
-For rationale and common test smells, read `tdd-rationale.md` and `testing-anti-patterns.md`.
+Report behavior covered, test level, commands and results, alternative verification, and residual risk. An applicable failing check blocks completion; missing infrastructure is a gap to report, not a reason to invent it automatically.

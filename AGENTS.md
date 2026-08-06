@@ -1,127 +1,93 @@
 # Go Clean Architecture Template — AI Agent Configuration Index
 
-> See `.cursor/rules/` for detailed coding standards.
+> Project-specific architecture, coding, testing, and Swagger conventions live under `.cursor/rules/`. Scale the development process by risk instead of running the full pipeline for every change.
 
-## Invocation
+## Default Development Flow
 
-In Cursor, use `/` to reference skill files or describe requirements in conversation. AI will automatically identify and apply the relevant skill.
-
-## Recommended Development Workflow
-
-### `/go` — End-to-End Development (Recommended)
-
-The most efficient way to develop features. Simply describe your requirement and AI handles the full pipeline:
-
-```
-/go Add an Article domain module with CRUD operations
+```text
+Inspect repository rules and code → Assess risk → Direct / Planned / Parallel / High-risk
+→ Behavior verification → Applicable project checks → Proportionate review → Delivery report
 ```
 
-Automated pipeline:
-```
-Requirements → Planning → Wave Execution → Code Review → Simplification
-(brainstorming)  (writing-plans)  (subagent-driven-development) (code-reviewer) (code-simplifier)
-```
+| Mode | Typical use | Default execution |
+|------|-------------|-------------------|
+| Direct | Clear, local, reversible change | Current agent implements, tests, and self-reviews |
+| Planned | Dependent steps, cross-layer contracts, or meaningful design choices | Lightweight plan; save a full plan only when useful |
+| Parallel | Independent slices with stable contracts and non-overlapping files | Dependency-wave subagent execution |
+| High-risk | Authentication/authorization, credentials, migrations, destructive writes, concurrency, privacy, or hard-to-reverse contracts | Design agreement, verification/rollback plan, independent review |
 
-- Only the first step (brainstorming) requires human confirmation; the rest runs automatically
-- Planning includes a coverage checklist before execution
-- Execution uses per-task spec review plus wave validation (`go build`, `go vet`, `go test`)
-- Final review focuses on global architecture/code quality; issues found during review are auto-fixed and re-verified
+File count is only a signal. A one-file authentication change may be high-risk.
 
-### Step-by-Step Workflow
+## Skills
 
-For finer-grained control, use individual skills:
+| Skill | Purpose | Use when |
+|-------|---------|----------|
+| `go` | Risk-adaptive end-to-end delivery | User explicitly requests full delivery |
+| `brainstorming` | Resolve consequential requirement or architecture choices | Real ambiguity can materially change the result; not for clear local work |
+| `writing-plans` | Create a durable multi-step plan | Cross-layer/domain, high-risk, parallel, cross-session, or approval work |
+| `test-driven-development` | Select a behavior verification strategy | Features, bugs, and refactors; allows characterization and validator-based alternatives |
+| `subagent-driven-development` | Execute an approved plan in parallel | Slices are independent, contracts stable, write sets disjoint, and parallelism pays off |
+| `e2e-testing` | Exercise the public interface | Existing harness adds value or requirements/risk justify it |
+| `code-review-expert` | Independent changeset review method | High-risk, cross-domain, large diff, multiple implementers, or explicit request |
+| `improve-codebase-architecture` | Quick or formal architecture assessment | Evidence-backed refactor candidates or interface design discussion |
 
-| Stage | Skill | Description |
-|-------|-------|-------------|
-| Requirements | `brainstorming` | Turn ideas into complete designs and specs |
-| Planning | `writing-plans` | Write detailed implementation plans (with TDD) |
-| Execution | `subagent-driven-development` | Execute plans with dependency-aware wave parallelism, per-task spec review, and final global code review |
-| Review | `code-review-expert` | SOLID, security, architecture review |
+## Agents
 
-## Skills Overview
-
-### Flow (decides how to handle a task)
-
-| Skill | Purpose | Trigger |
+| Agent | Purpose | Trigger |
 |-------|---------|---------|
-| `go` | End-to-end automated development | `/go` + requirement description |
-| `brainstorming` | Requirements exploration & design | **Must use** before creating features, components, or modifying behavior |
+| `code-reviewer` | Read-only independent changeset review | High-risk work, public contract/architecture changes, multiple implementers, difficult diff, or explicit request |
+| `code-simplifier` | Behavior-preserving refactor for a concrete target | Review identified specific complexity or the user explicitly requested it; not a routine final stage |
 
-### Planning (creates implementation plans)
+## Validation Strategy
 
-| Skill | Purpose | Trigger |
-|-------|---------|---------|
-| `writing-plans` | Write implementation plans | Multi-step tasks with specs or requirements |
+Run applicable checks from narrow to broad:
 
-### Execution (executes plans)
+1. focused `go test` for changed behavior;
+2. affected package/domain tests;
+3. `make mock`, `make di`, or `make doc` when their inputs changed;
+4. relevant `make build`, `make lint`, `make test`, or `make all`;
+5. `make e2e` when the existing harness and risk warrant it.
 
-| Skill | Purpose | Trigger |
-|-------|---------|---------|
-| `subagent-driven-development` | Subagent-driven development | Current session, one subagent per task, wave-parallel when safe |
-| `test-driven-development` | TDD development | New features, bug fixes, refactoring |
+An applicable failing check blocks completion. A missing or inapplicable tool is reported as a gap and residual risk; do not create infrastructure solely to satisfy a generic workflow.
 
-### Review (quality assurance)
+## Project Rules
 
-| Skill | Purpose | Trigger |
-|-------|---------|---------|
-| `code-review-expert` | Code review | Review git changes, SOLID/security checks |
+- `.cursor/rules/00-project-overview.mdc`: stack, architecture, layout, and commands
+- `.cursor/rules/10-domain-layer.mdc` through `15-task-layer.mdc`: layer rules
+- `.cursor/rules/20-wire-di.mdc`: Wire dependency injection
+- `.cursor/rules/30-testing.mdc`: Go, testify, gomock, Handler tests, and coverage conventions
+- `.cursor/rules/40-api-swagger.mdc`: HTTP and Swagger contracts
 
-## Subagents
-
-| Agent | Purpose | Auto-Dispatch Scenario |
-|-------|---------|------------------------|
-| `code-reviewer` | Code review agent | `/go` step 4 (auto); after completing major project steps (manual) |
-| `code-simplifier` | Code simplification agent | `/go` step 5 (auto); when code needs simplification (manual) |
-
-## Skill Priority
-
-When multiple skills may apply, use them in this order:
-
-1. **Flow** (`go`, `brainstorming`) — Decide how to approach the task
-2. **Planning** (`writing-plans`) — Create the implementation plan
-3. **Execution** (`subagent-driven-development`, `test-driven-development`) — Execute the plan
-4. **Review** (`code-review-expert`) — Quality assurance
-5. **Simplification** (`code-simplifier`) — Reduce complexity
+Project rules override generic skills. If a rule disagrees with actual code or tooling, verify repository reality and report the mismatch instead of applying it blindly.
 
 ## Common Commands
 
 ```bash
-make build   # Build
-make serve   # Start the server
-make di      # Generate dependency injection code (Wire)
-make doc     # Generate Swagger documentation
-make lint    # Run linter (golangci-lint)
-make test    # Run tests (with coverage)
-make fmt     # Format code (gofumpt + golines)
-make mock    # Generate mocks (mockgen)
+make build   # Build cmd/api/main.go
+make serve   # Build and run with development config
+make di      # Generate Wire dependency injection
+make doc     # Generate Swagger docs
+make lint    # Run golangci-lint
+make test    # Run project tests with coverage profile
+make cov     # Open coverage report
+make mock    # Generate mocks
+make e2e     # Run the existing E2E script
+make fmt     # Run golines and gofumpt
+make all     # Lint, test, and build
 ```
 
 ## Architecture Overview
 
-Uses **DDD + Clean Architecture**, organized by domain modules:
+The repository uses DDD + Clean Architecture with inward dependencies:
 
-```
+```text
 internal/
-├── {domain}/              # Domain module (e.g., user/)
-│   ├── domain/            # Entities, business rules
-│   ├── usecase/           # Manager, interfaces, DTOs, mocks
-│   └── adapter/           # Handler, Router, Repository
-├── shared/                # Shared infrastructure (Server, Router, Middleware)
-└── di/                    # Wire dependency injection
+├── {domain}/
+│   ├── domain/
+│   ├── usecase/
+│   └── adapter/
+├── shared/
+└── di/
 ```
 
-Feature development order: Domain → UseCase → Repository → Handler → Router → Swagger → Tests → Wire DI
-
-## Agent skills
-
-### Issue tracker
-
-Issues and PRDs live as markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context repo: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Use established terms such as domain, usecase, handler, router, repository, gateway, middleware, and Wire rather than replacing them to match a generic glossary.

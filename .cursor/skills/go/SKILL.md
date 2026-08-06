@@ -1,30 +1,79 @@
 ---
 name: go
-description: Orchestrates an end-to-end workflow from approved requirements through planning, implementation, validation, review, and simplification. Use when the user requests a full design-to-delivery workflow.
+description: Risk-adaptive end-to-end development workflow. Use when the user explicitly requests full delivery from repository inspection through implementation, validation, and proportionate review.
 disable-model-invocation: true
 ---
 
 # Go
 
-Run an end-to-end delivery workflow without assuming a programming language, framework, architecture, or build tool.
+Deliver the requested change end to end using the lightest workflow that gives credible confidence. Increase process only when ambiguity, risk, or useful parallelism justifies it.
 
-## Flow
+## Core rules
 
-1. **Design:** use `brainstorming` to understand intent, constraints, alternatives, and success criteria. Wait for user approval.
-2. **Choose scope:** use a direct TDD path for a small, localized change; use planning and subagents for a multi-area, cross-cutting, or architectural change.
-3. **Plan:** for multi-step work, use `writing-plans` and complete its coverage check.
-4. **Implement:** use `test-driven-development`; for a written multi-task plan, use `subagent-driven-development`.
-5. **Validate:** run the repository's build, focused/full test, static-analysis, and integration commands discovered from its documentation and CI.
-6. **Review:** dispatch `code-reviewer` after functional validation and the acceptance audit pass. Fix material findings and revalidate.
-7. **Simplify:** dispatch `code-simplifier` after review. Preserve observable behavior and revalidate any resulting change.
+- Inspect repository rules, code, tests, and CI before choosing commands or architecture. Use go-clean-arch conventions under `.cursor/rules/` and never invent tooling.
+- Ask only about unresolved decisions that materially change the result. State minor reversible assumptions and proceed.
+- The coordinator may implement directly. Use subagents only when independent work or judgment is worth the context-transfer cost.
+- Match validation and review depth to risk. An applicable failing check blocks completion; a tool the repository does not provide is a reported gap, not automatically a blocker.
+- Do not create design documents, plans, E2E infrastructure, abstractions, or cleanup changes solely to satisfy this workflow.
+- Stop before changing approved public behavior, data safety, or a consequential design decision.
 
-## Constraints
+## 1. Assess
 
-- Lock approved requirements after design. Stop and ask before changing scope.
-- Do not prescribe commands, test frameworks, package layouts, or E2E tooling. Discover them from the current repository.
-- Do not skip validation, review, or simplification merely because a change is small; if a stage cannot be performed, report the blocker.
-- Use the project's own architecture and vocabulary after inspecting its instructions and existing code.
+Classify the work using engineering judgment:
 
-## Completion
+| Mode | Typical signals | Default execution |
+|------|-----------------|-------------------|
+| **Direct** | Clear, local, reversible, one coherent change | Implement in the current agent |
+| **Planned** | Dependent steps, cross-layer contracts, or meaningful design choices | Make a concise plan, then implement |
+| **Parallel** | Independent slices with stable contracts and non-overlapping files | Plan dependency waves, then use subagents |
+| **High-risk** | Authentication/authorization, migrations, destructive writes, concurrency, credentials/privacy, or hard-to-reverse public contracts | Agree design, plan verification/rollback, require independent review |
 
-Report the approved goal, changed files, validation actually run and its results, review outcome, simplification outcome, and any remaining risks or blockers.
+File count is only a signal. Briefly state the selected mode when it changes interaction, artifacts, or delivery time.
+
+## 2. Clarify and plan as needed
+
+- Clear task: proceed with explicit assumptions.
+- Blocking ambiguity: group related questions.
+- Consequential alternatives or durable architecture decisions: use `brainstorming`.
+- Direct work needs no plan document.
+- Planned work may use a lightweight in-session sequence.
+- Parallel or high-risk work should use `writing-plans` for exact contracts, dependencies, acceptance criteria, files, and project-derived validation.
+- Save a design/plan artifact only when it must survive the session, requires approval, or records migration/compatibility decisions.
+
+Do not manufacture tasks or interfaces to fill a template.
+
+## 3. Implement and test
+
+Choose verification based on the change:
+
+- Reproducible bug, business rule, parser/validator, or state transition: prefer a failing regression/behavior test first.
+- Ordinary new behavior: add or update behavior-focused tests; test-first is preferred when practical.
+- Legacy characterization, mechanical refactor, generated code, or configuration: existing tests, characterization, build/schema validation, or another explicit check may be more appropriate.
+- HTTP/API behavior: update Swagger per `.cursor/rules/40-api-swagger.mdc`; use the existing integration/E2E harness when it provides meaningful coverage. Create new infrastructure only when requirements or risk justify it.
+- Interface or dependency changes: regenerate mocks/Wire only when affected, using repository commands.
+
+Direct and planned work may be implemented by the coordinator. For parallel work, use `subagent-driven-development` only with stable inputs and non-overlapping write sets; pass exact artifacts from prerequisite tasks.
+
+## 4. Validate from narrow to broad
+
+Run applicable repository checks:
+
+1. focused `go test` for changed behavior;
+2. affected package/domain suite;
+3. generated artifact checks such as `make mock`, `make di`, or `make doc` when inputs changed;
+4. relevant `make build`, `make lint`, or other documented checks;
+5. integration/E2E and broader validation when supported and warranted.
+
+Fix relevant failures and rerun the failing check. Report commands actually run, unavailable checks, and residual risk.
+
+## 5. Review proportionally
+
+Always inspect the final diff for scope, correctness, generated artifacts, accidental files, and unnecessary complexity.
+
+Use `code-reviewer` when security, authentication/authorization, credentials/privacy, migration, concurrency, destructive behavior, public contracts, or cross-domain architecture changed; when multiple implementers contributed; when the diff is difficult to reason about; or when the user asks.
+
+Otherwise self-review plus passing validation is sufficient. Run at most one full changeset review; after fixes, target the affected findings unless the design changed materially. Invoke `code-simplifier` only for a concrete simplification target or explicit user request.
+
+## 6. Deliver
+
+Report what changed, important decisions, affected areas, checks actually run and results, checks not run and why, and residual risks or follow-up.

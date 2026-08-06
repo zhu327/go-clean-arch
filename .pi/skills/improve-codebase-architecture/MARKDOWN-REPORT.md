@@ -77,10 +77,6 @@ One larger section. Candidate name, one sentence on why.
 
 ## Tone
 
-Plain English, concise — but the architectural nouns and verbs come straight from [LANGUAGE.md](LANGUAGE.md).
+Use plain, concise language and the project's established terminology. Apply the vocabulary from [LANGUAGE.md](LANGUAGE.md) when it makes the architectural point more precise; do not rename accurate project concepts merely to match the glossary.
 
-**Use exactly:** module, interface, implementation, depth, deep, shallow, seam, adapter, leverage, locality.
-
-**Never substitute:** component, service, unit (for module) · API, signature (for interface) · boundary (for seam) · layer, wrapper (for module, when you mean module).
-
-**Wins bullets** name the gain in glossary terms: *"locality: bugs concentrate in one module"*, *"leverage: one interface, N call sites"*, *"interface shrinks; implementation absorbs the wrappers"*. Don't write *"easier to maintain"* or *"cleaner code"*.
+**Wins bullets** should name a concrete gain, preferably in terms of locality, leverage, interface size, test surface, or removed coupling. Avoid unsupported claims such as merely "cleaner code."

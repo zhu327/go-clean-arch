@@ -1,6 +1,6 @@
 # Language
 
-Shared vocabulary for every suggestion this skill makes. Use these terms exactly — don't substitute "component," "service," "API," or "boundary." Consistent language is the whole point.
+Vocabulary for reasoning about module depth. Use these terms when they add precision, while preserving established go-clean-arch domain and layer terminology.
 
 ## Terms
 
@@ -40,14 +40,14 @@ What maintainers get from depth. Change, bugs, knowledge, and verification conce
 
 ## Relationships
 
-- A **Module** has exactly one **Interface** (the surface it presents to callers and tests).
+- A **Module** may present one or more caller-facing interfaces; assess whether each surface earns its complexity.
 - **Depth** is a property of a **Module**, measured against its **Interface**.
 - A **Seam** is where a **Module**'s **Interface** lives.
 - An **Adapter** sits at a **Seam** and satisfies the **Interface**.
 - **Depth** produces **Leverage** for callers and **Locality** for maintainers.
 
-## Rejected framings
+## Framing notes
 
-- **Depth as ratio of implementation-lines to interface-lines** (Ousterhout): rewards padding the implementation. We use depth-as-leverage instead.
-- **"Interface" as the TypeScript `interface` keyword or a class's public methods**: too narrow — interface here includes every fact a caller must know.
-- **"Boundary"**: overloaded with DDD's bounded context. Say **seam** or **interface**.
+- Do not measure depth as implementation-lines divided by interface-lines; use depth-as-leverage.
+- `Interface` here is broader than a Go interface or method list: it includes every fact a caller must know.
+- Use `seam` for a place where behavior can vary. Use `boundary`, `service`, `handler`, `repository`, `gateway`, or other project terms when accurate.

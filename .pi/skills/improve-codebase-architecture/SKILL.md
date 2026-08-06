@@ -8,9 +8,9 @@ disable-model-invocation: true
 
 Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
 
-## Glossary
+## Analysis vocabulary
 
-Use these terms exactly in every suggestion. Consistent language is the point — don't drift into "component," "service," "API," or "boundary." Full definitions in [LANGUAGE.md](LANGUAGE.md).
+Use the following concepts when they improve precision, while preserving the project's established domain and architecture terminology. Full definitions are in [LANGUAGE.md](LANGUAGE.md).
 
 - **Module** — anything with an interface and an implementation (function, class, package, slice).
 - **Interface** — everything a caller must know to use the module: types, invariants, error modes, ordering, config. Not just the type signature.
@@ -47,7 +47,12 @@ Use these rules as the domain vocabulary when naming modules and describing seam
 
 ### 2. Explore
 
-Use the `subagent` tool with `subagent_type="Explore"` to walk the codebase. Don't follow rigid heuristics — explore organically and note where you experience friction:
+Choose the lightest exploration mode that covers the request:
+
+- **Quick assessment:** inspect the relevant area directly and return a small set of evidence-backed candidates without creating an artifact.
+- **Formal review:** for a large codebase, broad scope, or durable review, use an `Explore` subagent and produce the report in Step 3.
+
+Don't follow rigid heuristics—explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?
 - Where are modules **shallow** — interface nearly as complex as the implementation?
@@ -60,7 +65,7 @@ Apply the **deletion test** to anything you suspect is shallow: would deleting i
 
 ### 3. Present candidates
 
-Present findings as a markdown report using the `write` tool. Save it to `docs/architecture-reviews/YYYY-MM-DD-<topic>.md` (or another location the user prefers). If the project has a Canvas/visual-report workflow, you may render the same content there; otherwise keep the report in markdown with Mermaid diagrams.
+For a quick assessment, present concise findings in the conversation. For a formal review, write a markdown report to `docs/architecture-reviews/YYYY-MM-DD-<topic>.md` (or the project's preferred location). Use diagrams only when they clarify a relationship better than prose.
 
 The report should include for each candidate:
 
@@ -75,7 +80,7 @@ End the report with a **Top recommendation** section: which candidate you'd tack
 
 **Use the project's architecture vocabulary for the domain** (e.g. "the Certificate usecase manager" not "the cert handler"), and [LANGUAGE.md](LANGUAGE.md) vocabulary for the architecture.
 
-Do NOT propose interfaces yet. After the report is presented, ask the user: "Which of these would you like to explore?"
+Do not design a detailed replacement interface until the user selects a candidate, unless the user explicitly requested an end-to-end proposal. Ask which candidate to explore when more than one remains credible.
 
 ### 4. Grilling loop
 
@@ -111,8 +116,4 @@ See [MARKDOWN-REPORT.md](MARKDOWN-REPORT.md) for detailed diagram pattern guidan
 
 ## Tone
 
-Plain English, concise — but the architectural nouns and verbs come straight from [LANGUAGE.md](LANGUAGE.md). Concision is not an excuse to drift.
-
-**Use exactly:** module, interface, implementation, depth, deep, shallow, seam, adapter, leverage, locality.
-
-**Never substitute:** component, service, unit (for module) · API, signature (for interface) · boundary (for seam) · layer, wrapper (for module, when you mean module).
+Use plain, concise language. Prefer `module`, `interface`, `implementation`, `depth`, `seam`, `adapter`, `leverage`, and `locality` when they express the intended concept, but do not rename established project concepts or prohibit terms such as service, component, API, boundary, or layer when those are accurate in context.

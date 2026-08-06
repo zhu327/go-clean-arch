@@ -1,6 +1,6 @@
 # Interface Design
 
-When the user wants to explore alternative interfaces for a chosen deepening candidate, use this parallel sub-agent pattern. Based on "Design It Twice" (Ousterhout) — your first idea is unlikely to be the best.
+When the user wants to explore alternative interfaces for a chosen deepening candidate, compare genuinely credible designs. Use parallel subagents only when the decision is high-impact or independent exploration is likely to improve it.
 
 Uses the vocabulary in [LANGUAGE.md](LANGUAGE.md) — **module**, **interface**, **seam**, **adapter**, **leverage**.
 
@@ -16,16 +16,17 @@ Before spawning sub-agents, write a user-facing explanation of the problem space
 
 Show this to the user, then immediately proceed to Step 2. The user reads and thinks while the sub-agents work in parallel.
 
-### 2. Spawn sub-agents
+### 2. Generate alternatives
 
-Spawn 3+ sub-agents in parallel using the `subagent` tool. Each must produce a **radically different** interface for the deepened module.
+Default to two credible alternatives produced in the current context. Do not manufacture a weak design merely to increase option count.
 
-Prompt each sub-agent with a separate technical brief (file paths, coupling details, dependency category from [DEEPENING.md](DEEPENING.md), what sits behind the seam). The brief is independent of the user-facing problem-space explanation in Step 1. Give each agent a different design constraint:
+For a long-lived public interface, irreversible migration, disputed architecture decision, or highly uncertain design, spawn 2–3 subagents in parallel. Give each the same technical brief (file paths, coupling details, dependency category from [DEEPENING.md](DEEPENING.md), and what sits behind the seam) but a relevant design emphasis, such as:
 
-- Agent 1: "Minimize the interface — aim for 1–3 entry points max. Maximise leverage per entry point."
-- Agent 2: "Maximise flexibility — support many use cases and extension."
-- Agent 3: "Optimise for the most common caller — make the default case trivial."
-- Agent 4 (if applicable): "Design around ports & adapters for cross-seam dependencies."
+- minimize the interface and maximize leverage;
+- optimize the common caller and safe defaults;
+- preserve a required extension or ports-and-adapters seam.
+
+Avoid "maximize flexibility" as a default goal unless concrete future consumers justify it.
 
 Include both [LANGUAGE.md](LANGUAGE.md) vocabulary and the project's architecture conventions in the brief so each sub-agent names things consistently with the architecture language and the project's domain language.
 

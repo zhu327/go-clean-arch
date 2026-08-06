@@ -25,8 +25,8 @@ Assume standard SOLID, OWASP, concurrency, error-handling, and performance knowl
 ### 1) Preflight
 - Scope with `git status -sb`, `git diff --stat`, `git diff` (or staged / commit range if asked).
 - Map entry points, ownership boundaries, critical paths (auth, writes, network).
-- Flag any file crossing **1000 lines** after the diff.
-- **Empty diff** → ask staged vs commit range. **>500 lines** → summarize by file, review by module. **Mixed concerns** → group findings by feature.
+- Treat significant file growth or mixed responsibilities as investigation signals; line count alone is not a blocker. Exempt generated, declarative, and intentionally linear files when structure remains coherent.
+- **Empty diff** → ask staged vs commit range. For a large diff, summarize by file and review by module. **Mixed concerns** → group findings by feature.
 
 ### 2) Structural / code-judo pass
 Load [`references/team-rules.md`](references/team-rules.md). Before checklist thinking, ask: *is there a reframe that makes whole branches, helpers, modes, or layers disappear?* Prefer deleting complexity over polishing it.
@@ -43,9 +43,10 @@ Load [`references/security-focus.md`](references/security-focus.md). State **exp
 ### 6) Reliability (diff-visible only)
 Surface issues in the change: swallowed errors, N+1 / hot-path cost, nil/empty/off-by-one, race/TOCTOU, wrong-layer logic. Prefer the project's boundary error type at API edges — do not leak internals to clients.
 
-### 6.5) Tests (only if test files in the diff)
-Flag: obscure names, assertion roulette, implementation-coupled mocks, happy-path-only coverage illusion.
-Do **not** flag: coherent multi-assert, mocks for nondeterminism, shared setup used by nearly every test, concise-but-obvious names.
+### 6.5) Tests
+Always assess whether changed behavior needs new or updated verification, considering risk and existing coverage. The absence of a test-file diff is a signal, not an automatic finding.
+
+When tests changed, flag obscure names, assertion roulette, implementation-coupled mocks, or happy-path-only coverage illusion. Do **not** flag coherent multi-assert, mocks for nondeterminism, shared setup used by nearly every test, or concise-but-obvious names.
 
 ### 7) Output format
 
@@ -96,7 +97,7 @@ Remedy: ...
 Do not approve merely because behavior seems correct. **Presumptive blockers** unless justified:
 - Clear structural regression or spaghetti growth (ad-hoc branches in shared paths)
 - Visible code-judo path ignored while preserving incidental complexity
-- File pushed across 1000 lines without strong reason
+- Significant file growth that mixes responsibilities or makes the change difficult to test and review
 - Unnecessary wrapper/cast/optionality churn; wrong-layer logic; duplicated canonical helper
 - Architecture-boundary leak
 

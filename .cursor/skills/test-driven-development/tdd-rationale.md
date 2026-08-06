@@ -1,87 +1,26 @@
-# TDD Rationale
+# When Test-First Adds Value
 
-**Load this reference when:** you need to understand WHY TDD matters, not HOW to do it.
+Load this reference only when the appropriate test order is unclear.
 
-## Why Order Matters
+## Prefer test-first when
 
-**"I'll write tests after to verify it works"**
+- reproducing a defect proves the regression test targets the real failure;
+- examples help define a business rule, parser, validator, or state transition;
+- edge cases are easier to discover before committing to an implementation;
+- an existing usecase, handler, repository, or gateway seam makes focused tests inexpensive.
 
-Tests written after code pass immediately. Passing immediately proves nothing:
-- Might test wrong thing
-- Might test implementation, not behavior
-- Might miss edge cases you forgot
-- You never saw it catch the bug
+Seeing the test fail for the expected reason is useful evidence that it detects missing behavior.
 
-Test-first forces you to see the test fail, proving it actually tests something.
+## Use another sequence when
 
-**"I already manually tested all the edge cases"**
+- characterization is needed before changing poorly understood legacy behavior;
+- the change is mechanical and a reliable existing suite protects behavior;
+- generated mocks, Wire output, Swagger, or declarative configuration have a stronger generator/build check;
+- an exploratory spike is needed to discover feasibility;
+- the failure cannot be reproduced deterministically and another verification method is more credible.
 
-Manual testing is ad-hoc. You think you tested everything but:
-- No record of what you tested
-- Can't re-run when code changes
-- Easy to forget cases under pressure
-- "It worked when I tried it" ≠ comprehensive
+Do not delete correct existing work merely because tests were written later. Assess whether tests can fail for relevant defects, cover required behavior, and support future changes.
 
-Automated tests are systematic. They run the same way every time.
+## Decision rule
 
-**"Deleting X hours of work is wasteful"**
-
-Sunk cost fallacy. The time is already gone. Your choice now:
-- Delete and rewrite with TDD (X more hours, high confidence)
-- Keep it and add tests after (30 min, low confidence, likely bugs)
-
-The "waste" is keeping code you can't trust. Working code without real tests is technical debt.
-
-**"TDD is dogmatic, being pragmatic means adapting"**
-
-TDD IS pragmatic:
-- Finds bugs before commit (faster than debugging after)
-- Prevents regressions (tests catch breaks immediately)
-- Documents behavior (tests show how to use code)
-- Enables refactoring (change freely, tests catch breaks)
-
-"Pragmatic" shortcuts = debugging in production = slower.
-
-**"Tests after achieve the same goals - it's spirit not ritual"**
-
-No. Tests-after answer "What does this do?" Tests-first answer "What should this do?"
-
-Tests-after are biased by your implementation. You test what you built, not what's required. You verify remembered edge cases, not discovered ones.
-
-Tests-first force edge case discovery before implementing. Tests-after verify you remembered everything (you didn't).
-
-30 minutes of tests after ≠ TDD. You get coverage, lose proof tests work.
-
-## Common Rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
-| "I'll test after" | Tests passing immediately prove nothing. |
-| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
-| "Already manually tested" | Ad-hoc ≠ systematic. No record, can't re-run. |
-| "Deleting X hours is wasteful" | Sunk cost fallacy. Keeping unverified code is technical debt. |
-| "Keep as reference, write tests first" | You'll adapt it. That's testing after. Delete means delete. |
-| "Need to explore first" | Fine. Throw away exploration, start with TDD. |
-| "Test hard = design unclear" | Listen to test. Hard to test = hard to use. |
-| "TDD will slow me down" | TDD faster than debugging. Pragmatic = test-first. |
-| "Manual test faster" | Manual doesn't prove edge cases. You'll re-test every change. |
-| "Existing code has no tests" | You're improving it. Add tests for existing code. |
-
-## Red Flags - STOP and Start Over
-
-- Code before test
-- Test after implementation
-- Test passes immediately
-- Can't explain why test failed
-- Tests added "later"
-- Rationalizing "just this once"
-- "I already manually tested it"
-- "Tests after achieve the same purpose"
-- "It's about spirit not ritual"
-- "Keep as reference" or "adapt existing code"
-- "Already spent X hours, deleting is wasteful"
-- "TDD is dogmatic, I'm being pragmatic"
-- "This is different because..."
-
-**All of these mean: Delete code. Start over with TDD.**
+Choose the cheapest verification sequence that provides credible evidence for the actual risk. Document exceptions when an automated behavior test would normally be expected.

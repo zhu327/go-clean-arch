@@ -1,60 +1,51 @@
 ---
 name: subagent-driven-development
-description: Use when executing a written implementation plan in the current session. Dispatches implementation subagents by dependency-safe waves, verifies task compliance, and runs project-derived validation.
+description: Execute an approved go-clean-arch plan with parallel implementation subagents when independent slices have stable contracts and non-overlapping write sets. Do not use when coordination cost exceeds plausible parallel benefit.
 ---
 
-# Subagent-Driven Development
+# Parallel Plan Execution
 
-Execute an approved plan with fresh implementer subagents. The dependency graph controls scheduling: independent tasks may run in parallel only when their file lists do not conflict.
+Use implementer subagents only for genuinely independent planned work. The coordinator may implement directly when tasks are coupled, small, or depend on evolving context.
 
-## Preflight
+## Entry criteria
 
-1. Read the plan and extract tasks, dependencies, files, acceptance criteria, tests, and validation commands.
-2. Confirm every task has exact files, test cases, and acceptance criteria.
-3. Confirm the coverage checklist is complete, dependencies have no cycles, and concurrent tasks do not create or modify the same files.
-4. Identify the repository’s actual build, test, lint/typecheck, integration, and E2E commands. Do not assume any language-specific command.
-5. If public behavior changes, confirm that the plan includes appropriate integration/E2E coverage when the repository supports it or requirements demand it.
+Confirm that:
 
-If any preflight condition fails, stop and return the concrete gap to planning; do not guess.
+- every slice has a goal, acceptance criteria, allowed files, and focused validation;
+- dependencies are acyclic and prerequisite contracts are stable;
+- concurrent slices do not modify the same files, shared interfaces, Wire sets, generated mocks, Swagger outputs, or other shared artifacts;
+- relevant `.cursor/rules/` and repository commands have been identified;
+- parallel execution likely saves more time than context transfer and integration.
 
-## Execute by Waves
+Otherwise execute sequentially or return the concrete planning gap. Do not invent contracts to enable parallelism.
+
+## Execute by waves
 
 For each dependency wave:
 
-1. Resolve HITL tasks through the user before dispatch.
-2. Dispatch up to four non-conflicting AFK implementers in parallel. Give each the full task text, its allowed files, context, and actual contracts from completed dependencies.
-3. Wait for all implementers in the wave.
-4. Dispatch independent spec-compliance reviewers for every completed task.
-5. If a reviewer finds an issue, have the implementer fix it and repeat review until it passes.
-6. Run the validation commands identified in the plan and project. If integrated work fails, dispatch one integration fixer with the exact output and changed-file list, then revalidate. After three unsuccessful attempts, stop and escalate.
-7. Mark the wave complete only after review and validation pass.
+1. Resolve blocking user decisions.
+2. Dispatch the smallest useful number of non-conflicting implementers.
+3. Provide the complete task, allowed files, relevant layer rules, and exact contracts from prerequisites.
+4. Inspect actual changes, not only reports.
+5. Run focused tests for each slice and an appropriate wave integration check.
+6. Use the narrowest owner for integration fixes; stop after repeated failures rather than looping indefinitely.
 
-## Artifact Passing
+Use `implementer-prompt.md` as an adaptable template. `examples.md` illustrates dependency waves and artifact passing, not mandatory ceremony.
 
-For a task that depends on earlier work, read the real generated artifacts—not summaries—and provide the exact relevant contract, schema, configuration shape, or exported interface to the next implementer. If actual artifacts disagree with the approved plan, stop and report the mismatch.
+## Independent compliance review
 
-## Acceptance Audit
+Use a separate spec reviewer for high-risk slices, trust/ownership boundaries, material public-contract changes, or behavior that tests cannot verify convincingly. Otherwise implementer self-check, coordinator inspection, and passing tests are sufficient.
 
-After all waves, verify:
+## Artifact passing
 
-- all planned tasks are complete;
-- all project-derived validations pass;
-- required integration/E2E suites pass;
-- the complete feature meets the approved goal;
-- cross-task contracts are consistent;
-- deviations are documented and approved.
+Read generated artifacts and provide exact relevant declarations, schemas, configuration, or contracts to downstream work. If actual output differs from the approved plan, resolve it before dispatching dependent tasks.
 
-Then dispatch the `code-reviewer` agent once for a global architecture, security, and maintainability review. The per-task reviewers assess specification compliance; the global reviewer assesses code quality.
+## Final integration
 
-## Safety Rules
+After all waves, confirm acceptance criteria and cross-slice contracts; run applicable integrated validation once; inspect the combined diff for scope, generated artifacts, and overlap; report deviations and residual risk.
 
-Never:
+Changeset-level code review belongs to the invoking workflow; do not dispatch a duplicate global reviewer here.
 
-- start implementation on the main branch without explicit user consent;
-- run parallel implementers that modify the same file;
-- ask an implementer to rediscover the plan instead of providing task text;
-- skip a failed spec-review finding, validation failure, or required acceptance audit;
-- replace independent review with implementer self-review;
-- proceed to a dependent wave before its prerequisites pass.
+## Safety rules
 
-Use `implementer-prompt.md` and `spec-reviewer-prompt.md` as templates.
+Never run parallel writers on overlapping files, allow silent write-set expansion, or claim validation not run. Follow repository and user authorization for destructive operations and branch policy.
