@@ -25,7 +25,7 @@ Proceed without a question when a reasonable assumption is low-risk and easy to 
 
 ## 3. Compare real alternatives
 
-When multiple credible approaches exist, present the smallest useful set—usually two—with AskQuestion. Explain the trade-off that matters for kfinops and recommend a default.
+When multiple credible approaches exist, present the smallest useful set—usually two—with AskQuestion. Explain the trade-off that matters for go-clean-arch and recommend a default.
 
 Do not manufacture alternatives to satisfy a quota. If one approach follows clearly from project constraints, explain it directly.
 

@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Select and apply behavior-focused verification for kfinops features, bug fixes, and refactors. Prefer test-first where it produces a meaningful failure signal; adapt for legacy characterization, generated code, configuration, and mechanical changes.
+description: Select and apply behavior-focused verification for go-clean-arch features, bug fixes, and refactors. Prefer test-first where it produces a meaningful failure signal; adapt for legacy characterization, generated code, configuration, and mechanical changes.
 ---
 
 # Behavior-Focused Development
@@ -29,7 +29,7 @@ When test-first applies:
 5. Run the focused test and affected package/domain suite.
 6. Refactor only while checks remain green.
 
-## kfinops defaults
+## go-clean-arch defaults
 
 - Prefer table-driven tests when several cases share setup and behavior.
 - Use `testify` assertions and `gomock` following existing package conventions.

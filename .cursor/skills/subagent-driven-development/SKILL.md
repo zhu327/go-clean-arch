@@ -1,6 +1,6 @@
 ---
 name: subagent-driven-development
-description: Execute an approved kfinops plan with parallel implementation subagents when independent slices have stable contracts and non-overlapping write sets. Do not use when coordination cost exceeds plausible parallel benefit.
+description: Execute an approved go-clean-arch plan with parallel implementation subagents when independent slices have stable contracts and non-overlapping write sets. Do not use when coordination cost exceeds plausible parallel benefit.
 ---
 
 # Parallel Plan Execution

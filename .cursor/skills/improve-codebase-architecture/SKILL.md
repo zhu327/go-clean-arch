@@ -1,12 +1,12 @@
 ---
 name: improve-codebase-architecture
-description: Find evidence-backed deepening opportunities in kfinops. Use for architecture assessment, consolidation of tightly coupled modules, testability improvements, or navigation friction; supports quick conversational assessment and formal review.
+description: Find evidence-backed deepening opportunities in go-clean-arch. Use for architecture assessment, consolidation of tightly coupled modules, testability improvements, or navigation friction; supports quick conversational assessment and formal review.
 disable-model-invocation: true
 ---
 
 # Improve Codebase Architecture
 
-Surface architectural friction and propose refactors that place useful behavior behind smaller, clearer interfaces. Preserve kfinops domain and layer terminology; use depth, seam, leverage, and locality when they add precision.
+Surface architectural friction and propose refactors that place useful behavior behind smaller, clearer interfaces. Preserve go-clean-arch domain and layer terminology; use depth, seam, leverage, and locality when they add precision.
 
 ## 1. Gather context
 
@@ -41,6 +41,6 @@ Do not design a detailed replacement interface until the user selects a candidat
 
 ## 5. Design and plan
 
-Use [DEEPENING.md](DEEPENING.md) for dependency strategy and [INTERFACE-DESIGN.md](INTERFACE-DESIGN.md) when alternatives need comparison. Preserve existing kfinops terms such as domain, usecase, repository, gateway, handler, task, and Wire.
+Use [DEEPENING.md](DEEPENING.md) for dependency strategy and [INTERFACE-DESIGN.md](INTERFACE-DESIGN.md) when alternatives need comparison. Preserve existing project terms such as domain, usecase, repository, gateway, handler, router, and Wire.
 
 Once a consequential design is agreed, use `writing-plans` when a durable multi-step plan is justified. Test through the selected behavior surface and remove superseded shallow tests only when replacement coverage is credible.
