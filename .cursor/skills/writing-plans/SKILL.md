@@ -43,7 +43,7 @@ For each proposed slice, provide:
 - **Blocked by:** explicit dependencies
 - **Areas touched:** use the project’s actual terminology
 
-When this skill runs standalone, ask the user to approve the breakdown before writing the detailed plan. In an approved autonomous pipeline, continue unless an unresolved HITL decision remains.
+When this skill runs standalone, use AskQuestion to approve the breakdown before writing the detailed plan. In an approved autonomous pipeline, continue unless an unresolved HITL decision remains.
 
 ## 3. Write the Plan
 
@@ -131,4 +131,4 @@ Before handoff, confirm:
 
 ## Handoff
 
-Execute sequentially when tasks share evolving context, interfaces, generated outputs, or files. Hand the plan to `subagent-driven-development` only when independent slices have stable contracts, non-overlapping write sets, and plausible parallel benefit. In standalone use, ask before execution; in an approved autonomous pipeline, continue. Provide each implementer the full task text rather than asking it to rediscover the plan.
+Execute sequentially when tasks share evolving context, interfaces, generated outputs, or files. Hand the plan to `subagent-driven-development` only when independent slices have stable contracts, non-overlapping write sets, and plausible parallel benefit. In standalone use, use AskQuestion before execution; in an approved autonomous pipeline, continue. Provide each implementer the full task text rather than asking it to rediscover the plan.

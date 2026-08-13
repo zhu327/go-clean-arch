@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Code Review Expert
 
-Review-only by default. Do not implement until the user confirms.
+Review-only by default. Do not implement until confirmed via AskQuestion.
 
 **Philosophy**: Be ambitious about structure. Hunt for **code judo** — restructurings that preserve behavior while *deleting* complexity (not rearranging it). Prefer the solution that feels inevitable in hindsight.
 
@@ -27,7 +27,7 @@ Assume standard SOLID, OWASP, concurrency, error-handling, and performance knowl
 - Scope with `git status -sb`, `git diff --stat`, `git diff` (or staged / commit range if asked).
 - Map entry points, ownership boundaries, critical paths (auth, writes, network).
 - Treat significant file growth or mixed responsibilities as investigation signals; line count alone is not a blocker. Exempt generated, declarative, and coherent linear files when structure remains clear.
-- **Empty diff** → ask staged vs commit range. For a large diff, summarize by file and review by domain/module. **Mixed concerns** → group findings by feature.
+- **Empty diff** → use AskQuestion for staged vs commit range. For a large diff, summarize by file and review by domain/module. **Mixed concerns** → group findings by feature.
 
 ### 2) Structural / code-judo pass
 
@@ -122,18 +122,14 @@ Fewer high-conviction comments > long nit lists.
 
 ### 10) Next steps
 
-**Direct user invoke** — ask, then wait:
+**Direct user invoke** — use AskQuestion with counts in the prompt (`P0: _, P1: _, P2: _, P3: _`), then wait:
 
-```
-I found X issues (P0: _, P1: _, P2: _, P3: _). How would you like to proceed?
+- Fix all
+- Fix P0/P1 only
+- Fix specific items
+- No changes
 
-A) Fix all
-B) Fix P0/P1 only
-C) Fix specific items
-D) No changes
-```
-
-**Subagent / pipeline invoke**: skip the prompt; return findings to caller. Never implement until explicitly confirmed.
+**Subagent / pipeline invoke**: skip AskQuestion; return findings to caller. Never implement until explicitly confirmed.
 
 ## Resources
 

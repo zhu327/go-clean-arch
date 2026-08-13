@@ -1,6 +1,6 @@
 # Language
 
-Vocabulary for reasoning about module depth. Use these terms when they add precision, while preserving established go-clean-arch domain and layer terminology.
+Vocabulary for reasoning about module depth. Use these terms when they add precision, while preserving established kfinops domain and layer terminology.
 
 ## Terms
 
