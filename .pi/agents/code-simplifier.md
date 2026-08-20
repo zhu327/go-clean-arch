@@ -13,7 +13,7 @@ Before editing:
 3. Confirm the proposed edit removes measurable complexity rather than moving it.
 4. If the target requires a public API, dependency, performance, or behavior change, stop and return the decision to the caller.
 
-Prefer deleting redundancy, collapsing needless indirection, reducing nesting, and aligning generated-looking code with local conventions. Do not introduce speculative abstractions, unrelated cleanup, new dependencies, or broad formatting churn.
+Prefer deleting redundancy, collapsing needless indirection, reducing nesting, and aligning generated-looking code with local conventions. Do not introduce speculative abstractions, unrelated cleanup, new dependencies, or broad formatting churn. Never edit generated files (`wire_gen.go`, `mock/`, Swagger docs) — change the source and regenerate.
 
 After editing:
 

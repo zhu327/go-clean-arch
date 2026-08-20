@@ -1,93 +1,81 @@
-# Go Clean Architecture Template — AI Agent Configuration Index
+# Go Clean Architecture Template — Agent Index
 
-> Project-specific architecture, coding, testing, and Swagger conventions live under `.cursor/rules/`. Scale the development process by risk instead of running the full pipeline for every change.
+Entry point for project rules, read by both pi and Cursor. Mandatory invariants live here; task workflows live in `.agents/skills/` (discovered by both harnesses); agent roles live in `.pi/agents/` (pi) and `.cursor/agents/` (Cursor). Concrete patterns follow existing code.
 
-## Default Development Flow
+## Stack & Commands
 
-```text
-Inspect repository rules and code → Assess risk → Direct / Planned / Parallel / High-risk
-→ Behavior verification → Applicable project checks → Proportionate review → Delivery report
-```
-
-| Mode | Typical use | Default execution |
-|------|-------------|-------------------|
-| Direct | Clear, local, reversible change | Current agent implements, tests, and self-reviews |
-| Planned | Dependent steps, cross-layer contracts, or meaningful design choices | Lightweight plan; save a full plan only when useful |
-| Parallel | Independent slices with stable contracts and non-overlapping files | Dependency-wave subagent execution |
-| High-risk | Authentication/authorization, credentials, migrations, destructive writes, concurrency, privacy, or hard-to-reverse contracts | Design agreement, verification/rollback plan, independent review |
-
-File count is only a signal. A one-file authentication change may be high-risk.
-
-## Skills
-
-| Skill | Purpose | Use when |
-|-------|---------|----------|
-| `go` | Risk-adaptive end-to-end delivery | User explicitly requests full delivery |
-| `brainstorming` | Resolve consequential requirement or architecture choices | Real ambiguity can materially change the result; not for clear local work |
-| `writing-plans` | Create a durable multi-step plan | Cross-layer/domain, high-risk, parallel, cross-session, or approval work |
-| `test-driven-development` | Select a behavior verification strategy | Features, bugs, and refactors; allows characterization and validator-based alternatives |
-| `subagent-driven-development` | Execute an approved plan in parallel | Slices are independent, contracts stable, write sets disjoint, and parallelism pays off |
-| `e2e-testing` | Exercise the public interface | Existing harness adds value or requirements/risk justify it |
-| `code-review-expert` | Independent changeset review method | High-risk, cross-domain, large diff, multiple implementers, or explicit request |
-| `improve-codebase-architecture` | Quick or formal architecture assessment | Evidence-backed refactor candidates or interface design discussion |
-
-## Agents
-
-| Agent | Purpose | Trigger |
-|-------|---------|---------|
-| `code-reviewer` | Read-only independent changeset review | High-risk work, public contract/architecture changes, multiple implementers, difficult diff, or explicit request |
-| `code-simplifier` | Behavior-preserving refactor for a concrete target | Review identified specific complexity or the user explicitly requested it; not a routine final stage |
-
-## Validation Strategy
-
-Run applicable checks from narrow to broad:
-
-1. focused `go test` for changed behavior;
-2. affected package/domain tests;
-3. `make mock`, `make di`, or `make doc` when their inputs changed;
-4. relevant `make build`, `make lint`, `make test`, or `make all`;
-5. `make e2e` when the existing harness and risk warrant it.
-
-An applicable failing check blocks completion. A missing or inapplicable tool is reported as a gap and residual risk; do not create infrastructure solely to satisfy a generic workflow.
-
-## Project Rules
-
-- `.cursor/rules/00-project-overview.mdc`: stack, architecture, layout, and commands
-- `.cursor/rules/10-domain-layer.mdc` through `15-task-layer.mdc`: layer rules
-- `.cursor/rules/20-wire-di.mdc`: Wire dependency injection
-- `.cursor/rules/30-testing.mdc`: Go, testify, gomock, Handler tests, and coverage conventions
-- `.cursor/rules/40-api-swagger.mdc`: HTTP and Swagger contracts
-
-Project rules override generic skills. If a rule disagrees with actual code or tooling, verify repository reality and report the mismatch instead of applying it blindly.
-
-## Common Commands
+Go API template: DDD + Clean Architecture, Wire DI, GORM, gomock, HTTP + Swagger.
 
 ```bash
-make build   # Build cmd/api/main.go
-make serve   # Build and run with development config
-make di      # Generate Wire dependency injection
-make doc     # Generate Swagger docs
-make lint    # Run golangci-lint
-make test    # Run project tests with coverage profile
-make cov     # Open coverage report
-make mock    # Generate mocks
-make e2e     # Run the existing E2E script
-make fmt     # Run golines and gofumpt
-make all     # Lint, test, and build
+make mock   # regen mocks — after changing usecase ports (interfaces.go)
+make di     # regen Wire DI — after changing providers
+make doc    # regen Swagger docs — after changing handler annotations
+make lint   # golangci-lint; lint-dupl and nilaway are separate targets
+make test   # tests + coverage profile (make cov to open)
+make build  # build cmd/api/main.go
+make all    # lint + test + build
+make fmt    # gofumpt + golines
+make e2e    # scripts/e2e.sh; starts its own docker compose stack
 ```
 
-## Architecture Overview
+If AGENTS.md conflicts with the code or repository tooling, follow the code for behavior and report the mismatch instead of silently editing code or docs.
 
-The repository uses DDD + Clean Architecture with inward dependencies:
+## Architecture
+
+Dependencies point inward only.
 
 ```text
 internal/
-├── {domain}/
-│   ├── domain/
-│   ├── usecase/
-│   └── adapter/
-├── shared/
-└── di/
+├── {domain}/domain/     # entities, domain errors, validation — pure Go, no IO/framework
+├── {domain}/usecase/    # ports (interfaces.go), DTOs, usecase errors, mock/ (generated)
+├── {domain}/adapter/    # delivery/http (handlers) + repository (GORM, domain↔model mapping)
+├── shared/              # cross-cutting adapters (delivery server composition)
+└── di/                  # Wire providers
 ```
 
-Use established terms such as domain, usecase, handler, router, repository, gateway, middleware, and Wire rather than replacing them to match a generic glossary.
+- domain imports nothing from other layers; usecase depends only on domain and its own ports.
+- Handlers stay thin: bind/validate → usecase → respond. Swagger annotations live on handlers.
+- Never edit generated files (`wire_gen.go`, `mock/`, Swagger docs) — change the source and regenerate.
+
+## Boundary invariants
+
+- Handlers delegate errors via `c.Error()` to the shared ErrorHandler middleware — never hand-build error JSON responses.
+- Repositories use `db.WithContext(ctx)` for every query, map `gorm.ErrRecordNotFound` to domain/usecase errors, and wrap multi-table writes in transactions.
+
+## Verification ladder
+
+Pick the narrowest strategy that gives credible evidence, then widen with the change's scope and risk; a failing check must be fixed and rerun before moving on:
+
+| Change | Verification |
+|--------|--------------|
+| Reproducible bug | regression test that fails first, then fix |
+| Business rule / edge-heavy logic | red → green, one behavior at a time |
+| Refactor / mechanical move | existing suite as the safety net |
+| Ports / DI / Swagger inputs | `make mock` / `make di` / `make doc` |
+| Public HTTP behavior | `make e2e` when the harness covers it |
+
+Tests assert observable behavior (returns, persisted state, HTTP responses) — no test-only production hooks, no shared mutable state, no order/timing coupling. An applicable failing check blocks completion; a missing tool is a reported gap, not a blocker.
+
+## Workflow
+
+| Mode | Signals | Execution |
+|------|---------|-----------|
+| Direct (default) | clear, local, reversible | implement → narrowest checks → self-review diff → report |
+| Planned | dependent steps, cross-layer contracts | lightweight plan (Goal/Assumptions/Steps/Validation), then implement |
+| Parallel | independent slices, disjoint write sets | skill `plan-execute` |
+| High-risk | auth, security, privacy, credentials, money, migrations, destructive writes, concurrency, public contracts | design agreement + rollback plan + one independent `code-reviewer` review |
+
+File count is a signal, not the rule — a one-file auth change is high-risk. Ask only questions whose answers materially change the result; state minor assumptions and proceed. Never invent project tooling.
+
+## Output hygiene
+
+- Execute directly; do not restate the plan before acting.
+- No reasoning leakage in code, docs, or commits (decision numbering, review dialogue, change narratives).
+- Read a file once per session; prefer grep over re-reading. Never re-dispatch a subagent with an unchanged task.
+- Lean replies: no preamble, no restating the diff, no narrating the next step before doing it.
+
+## Skills & Agents
+
+Skills (`.agents/skills/`, shared by pi and Cursor): `grill-me` (relentless design interview before consequential work), `plan-execute` (parallel/high-risk planning + wave execution), `code-review-expert` (changeset review methodology), `improve-codebase-architecture` (deepening assessment, explicit invocation).
+
+Agents (`.pi/agents/`): `code-reviewer` (read-only independent review), `code-simplifier` (targeted behavior-preserving simplification). At most one full changeset review; re-review fixes only when they reshape the design.
