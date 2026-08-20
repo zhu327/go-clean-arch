@@ -1,6 +1,0 @@
----
-description: Project rules live in AGENTS.md
-alwaysApply: true
----
-
-Read and follow AGENTS.md at the repository root — it is the entry point for stack, commands, invariants, verification, and workflow. Skills referenced by AGENTS.md live in `.agents/skills/` (auto-discovered by Cursor and pi); pi agent roles live in `.pi/agents/`, Cursor agent roles in `.cursor/agents/`.

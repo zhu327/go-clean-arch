@@ -1,7 +1,6 @@
 ---
 name: code-review-expert
 description: Expert changeset review with a senior engineer lens. Two axes — intent (does it do what was asked?) and code quality (structure, security, reliability, tests). Finds structural regressions and code-judo simplifications. Use for code review requests and pipeline review stages.
-disable-model-invocation: true
 ---
 
 # Code Review Expert
@@ -25,7 +24,7 @@ Assume standard SOLID, OWASP, concurrency, and error-handling knowledge; do not 
 4. **Architecture** (load [`references/anti-false-positives.md`](references/anti-false-positives.md) before filing): boundary leaks, wrong-layer logic, duplicated canonical helpers. Non-trivial refactors → incremental plan, not big-bang rewrite.
 5. **Removal candidates** (team-rules): safe-delete-now vs defer-with-plan. Evidence: no references (incl. dynamic), no external consumers, tests/docs updated — or preconditions + migration + rollback if deferred.
 6. **Security** (load [`references/security-focus.md`](references/security-focus.md)): state **exploitability** and **impact**. Skip speculative supply-chain/CVE audits unless the diff changes deps or trust boundaries.
-7. **Reliability (diff-visible only)**: swallowed errors, N+1 / hot-path cost, nil / off-by-one, race / TOCTOU. Use the project's boundary error type at API edges — do not leak internals.
+7. **Reliability (diff-visible only)**: swallowed errors, N+1 / hot-path cost, nil / off-by-one, race / TOCTOU, revertibility / blast radius (backward compatibility, irreversible migrations/config changes). Use the project's boundary error type at API edges — do not leak internals.
 8. **Tests**: changed behavior needs new or updated verification — a missing test diff is a signal, not an automatic finding. Flag assertion roulette and implementation-coupled mocks; do not flag coherent multi-assert tests or shared setup used by nearly every test.
 
 ## Output
@@ -62,7 +61,7 @@ Do not approve merely because behavior seems correct. Presumptive blockers unles
 
 ## Next steps
 
-Direct user invoke → use `question` with fix options (all / P0+P1 / specific / none) and wait for confirmation. Subagent / pipeline invoke → return findings to the caller. Never implement until explicitly confirmed.
+Direct user invoke → use your harness's question tool (pi `question`, Cursor `AskUserQuestion`) with fix options (all / P0+P1 / specific / none) and wait for confirmation; without a question tool, ask in markdown. Subagent / pipeline invoke → return findings to the caller. Never implement until explicitly confirmed.
 
 ## Resources
 

@@ -11,7 +11,7 @@ Interview the user relentlessly until you reach shared understanding. Do not act
 
 Map the discussion as a **design tree**: every decision branches into the decisions hanging off it. Work the tree in rounds.
 
-The **frontier** is every decision whose prerequisites are already settled — questions you can ask *now* without guessing at answers not yet heard. Ask the whole frontier in one round, capped at the four highest-consequence questions (the `question` tool's limit); the rest wait for the next round. A question whose answer depends on a still-open question belongs to a later round.
+The **frontier** is every decision whose prerequisites are already settled — questions you can ask *now* without guessing at answers not yet heard. Ask the whole frontier in one round, capped at the four highest-consequence questions (the usual limit of a question tool); the rest wait for the next round. A question whose answer depends on a still-open question belongs to a later round.
 
 Each round:
 
@@ -25,7 +25,7 @@ Each round:
 
 3. Wait for all answers before the next round.
 
-In pi, deliver rounds via the `question` tool (options = the credible alternatives, recommendation in the prompt); fall back to the markdown format when questions need long context or free-form answers.
+Deliver rounds via your harness's question tool (pi `question`, Cursor `AskUserQuestion`; options = the credible alternatives, recommendation in the prompt). Fall back to the markdown format when no question tool is available or questions need long context or free-form answers.
 
 ## Pruning
 
@@ -37,4 +37,17 @@ Finding *facts* is your job, never the user's. When a frontier question needs a 
 
 ## Done
 
-The session ends when no unresolved decision can materially change the design or risk profile — remaining branches are recorded as explicit assumptions. Summarize the settled decisions and explicitly deferred scope, get the user's confirmation, then hand off: multi-step work → skill `plan-execute`; a clear local change → implement directly.
+The session ends when no unresolved decision can materially change the design or risk profile — remaining branches are recorded as explicit assumptions. Present the **Handover Artifact**, get the user's confirmation, then hand off:
+
+```markdown
+### Settled Decisions
+- [D1]: ...
+
+### Explicit Assumptions (Pruned)
+- [A1]: ...
+
+### Non-Goals / Deferred Scope
+- [N1]: ...
+```
+
+Multi-step work → pass this artifact to skill `plan-execute`; a clear local change → implement directly.

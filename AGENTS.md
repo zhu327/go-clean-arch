@@ -76,6 +76,6 @@ File count is a signal, not the rule — a one-file auth change is high-risk. As
 
 ## Skills & Agents
 
-Skills (`.agents/skills/`, shared by pi and Cursor): `grill-me` (relentless design interview before consequential work), `plan-execute` (parallel/high-risk planning + wave execution), `code-review-expert` (changeset review methodology), `improve-codebase-architecture` (deepening assessment, explicit invocation).
+Skills (`.agents/skills/`, shared by pi and Cursor): `grill-me` (relentless design interview before consequential work), `plan-execute` (parallel/high-risk planning + wave execution), `code-review-expert` (changeset review methodology), `improve-codebase-architecture` (deepening assessment). Invocation policy: `improve-codebase-architecture` is human-triggered only (`disable-model-invocation: true`); the other skills remain model-invocable.
 
 Agents (`.pi/agents/`): `code-reviewer` (read-only independent review), `code-simplifier` (targeted behavior-preserving simplification). At most one full changeset review; re-review fixes only when they reshape the design.

@@ -15,7 +15,7 @@ Plan only when dependencies, contracts, risk, or handoffs justify a durable arti
 ## Final validation
 ```
 
-Save durable plans to `docs/plans/YYYY-MM-DD-<feature>.md`.
+Save durable plans to `docs/plans/YYYY-MM-DD-<feature>.md`. If this plan follows a `grill-me` handoff, use its **Handover Artifact** (`Settled Decisions`, `Explicit Assumptions`, `Non-Goals`) as plan inputs instead of re-deriving settled context.
 
 ## Full plan (parallel / high-risk / cross-session)
 
@@ -50,7 +50,7 @@ Per wave:
 3. Inspect actual diffs, not agent reports; run each slice's focused validation plus one integration check per wave.
 4. Fix integration failures with the narrowest owner; escalate after repeated failures rather than looping.
 
-The coordinator verifies each slice's acceptance criteria against the actual diff — there is no separate slice-level spec reviewer. High-risk or public-contract changesets get exactly one independent `code-reviewer` pass at the end (per AGENTS.md), never per slice. Never: parallel writers on the same file, silent write-set expansion, or claimed validation that did not run. For dependent work, pass the generated artifact's exact declarations — if they differ from the plan, stop and resolve before dispatching downstream.
+The coordinator verifies each slice's acceptance criteria against the actual diff — there is no separate slice-level spec reviewer. High-risk or public-contract changesets get exactly one independent `code-review-expert` pass (via the `code-reviewer` agent, per AGENTS.md) at the end, never per slice. Never: parallel writers on the same file, silent write-set expansion, or claimed validation that did not run. For dependent work, pass the generated artifact's exact declarations — if they differ from the plan, stop and resolve before dispatching downstream.
 
 ## Handoff
 

@@ -12,6 +12,7 @@ Non-negotiables for this review. Prefer deleting complexity over rearranging it.
 6. **Canonical home** — feature logic belongs in the owning layer/package; reuse existing helpers over near-duplicates.
 7. **Orchestration** — avoid pointless serialization of independent work; avoid partial-update flows that leave state half-applied.
 8. **Knowledge duplication** — same business decision expressed in multiple places, same domain concept named differently, config values repeated as literals, copy-pasted logic instead of extracted helpers. DRY is about decisions, not code lines.
+9. **Revertibility / blast radius** — flag changes that break backward compatibility or make rollback unsafe (irreversible migrations, config/contract changes). State the rollback path or the justification for accepting the risk.
 
 ## Preferred remedies
 
