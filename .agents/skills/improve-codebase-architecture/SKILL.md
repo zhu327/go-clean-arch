@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Improve Codebase Architecture
 
-Surface architectural friction and propose **deepening** refactors. Vocabulary (module, interface, seam, adapter, depth, leverage, locality) is defined in [LANGUAGE.md](LANGUAGE.md). Key tests: the **deletion test** (deleting a pass-through makes complexity vanish; deleting a deep module pushes it into N callers) and **one adapter = hypothetical seam, two adapters = real seam**.
+Surface architectural friction and propose **deepening** refactors. Vocabulary (module, interface, seam, adapter, depth, leverage, locality) is defined in [LANGUAGE.md](LANGUAGE.md). Use the **deletion test**: deleting a pass-through makes complexity vanish, while deleting a deep module pushes it into N callers. Treat a single production adapter as evidence that a seam may be hypothetical, not proof that it is unnecessary; keep it when it isolates real volatility, ownership, testability, or an architectural boundary.
 
 ## Process
 

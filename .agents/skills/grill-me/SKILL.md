@@ -1,11 +1,11 @@
 ---
 name: grill-me
-description: Relentless interview to sharpen a plan or design. Use when the user wants to stress-test their thinking, asks to be grilled, or a task hinges on consequential unresolved decisions.
+description: Structured design interview that resolves consequential decisions without dwelling on reversible details. Use when the user wants to stress-test their thinking, asks to be grilled, or a task hinges on material unresolved decisions.
 ---
 
 # Grill Me
 
-Interview the user relentlessly until you reach shared understanding. Do not act on the result until the user confirms.
+Interview until every material, irreversible, or high-risk decision is settled. Do not prolong the interview over reversible choices that project conventions or explicit assumptions can safely resolve.
 
 ## Rounds and the frontier
 
@@ -37,7 +37,7 @@ Finding *facts* is your job, never the user's. When a frontier question needs a 
 
 ## Done
 
-The session ends when no unresolved decision can materially change the design or risk profile — remaining branches are recorded as explicit assumptions. Present the **Handover Artifact**, get the user's confirmation, then hand off:
+The session ends when no unresolved decision can materially change the design or risk profile — remaining branches are recorded as explicit assumptions. Present the **Handover Artifact**. Require explicit confirmation before handing off high-risk work or public-contract changes; for ordinary reversible work, proceed unless the user objects:
 
 ```markdown
 ### Settled Decisions
