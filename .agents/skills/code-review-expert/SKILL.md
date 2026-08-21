@@ -14,7 +14,7 @@ Review-only until the user confirms. Hunt for **code judo** — restructurings t
 - **P2** maintainability / spaghetti growth — fix or follow-up
 - **P3** style / naming — optional
 
-Assume standard SOLID, OWASP, concurrency, and error-handling knowledge; do not restate textbook definitions. **Don't duplicate green gates**: when `make lint` / `nilaway` / `make test` are green, don't re-report diagnostics those tools would catch — but still judge whether the gates actually cover the changed behavior. Hunt the semantic gaps tooling cannot see. Project standards live in AGENTS.md (layer rules, regen targets); cite them, do not restate them.
+Assume standard SOLID, OWASP, concurrency, and error-handling knowledge; do not restate textbook definitions. **Don't duplicate green gates**: when the project's lint and test gates are green (commands from AGENTS.md), don't re-report diagnostics those tools would catch — but still judge whether the gates actually cover the changed behavior. Hunt the semantic gaps tooling cannot see. Project standards live in AGENTS.md (layer rules, regen targets); cite them, do not restate them.
 
 ## Workflow
 

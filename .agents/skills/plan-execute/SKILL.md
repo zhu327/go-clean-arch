@@ -19,9 +19,9 @@ Save durable plans to `docs/plans/YYYY-MM-DD-<feature>.md`. If this plan follows
 
 ## Full plan (parallel / high-risk / cross-session)
 
-First inspect the actual code, tests, Makefile targets, and conventions; record unknowns instead of inventing architecture. Break work into vertical slices — one complete, independently verifiable behavior, never a horizontal "write all handlers" phase.
+First inspect the actual code, tests, task-runner targets (e.g. Makefile), and conventions; record unknowns instead of inventing architecture. Break work into vertical slices — one complete, independently verifiable behavior, never a horizontal "write all handlers" phase.
 
-Plan header: **Goal** (one sentence), **Architecture** (fit with existing layers), **Validation** (Makefile commands), plus a dependency table (Task | Type AFK/HITL | Blocked by | Parallelizable with).
+Plan header: **Goal** (one sentence), **Architecture** (fit with existing layers), **Validation** (task-runner commands, e.g. Makefile), plus a dependency table (Task | Type AFK/HITL | Blocked by | Parallelizable with).
 
 Per task, include only what applies:
 
@@ -33,11 +33,11 @@ Acceptance criteria: observable behavior + key error/edge cases
 Files: exact Create/Modify paths
 Contracts: signatures or schemas downstream tasks need — no implementations
 Tests: primary + boundary behavior; E2E only if the harness covers it
-Validation: focused test command + make target
+Validation: focused test command + project validation target
 Risk controls (high-risk only): failure modes, rollout/migration order, rollback trigger and steps, data compatibility
 ```
 
-Coverage check before handoff: every requirement mapped, no dependency cycles, parallel tasks share no files, commands come from the Makefile.
+Coverage check before handoff: every requirement mapped, no dependency cycles, parallel tasks share no files, validation commands come from the project's task runner.
 
 ## Wave execution (parallel slices)
 
@@ -54,4 +54,4 @@ The coordinator verifies each slice's acceptance criteria against the actual dif
 
 ## Handoff
 
-Confirm acceptance criteria, run integrated validation once (`make all` or the risk-appropriate subset), inspect the combined diff, report deviations and residual risk. Changeset review belongs to the invoking workflow; do not duplicate it.
+Confirm acceptance criteria, run integrated validation once (the project's full validation command, e.g. `make all`, or the risk-appropriate subset), inspect the combined diff, report deviations and residual risk. Changeset review belongs to the invoking workflow; do not duplicate it.
